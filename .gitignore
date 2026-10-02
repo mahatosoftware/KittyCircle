@@ -49,6 +49,12 @@ emulator-debug.log*
 **/google-services.json
 **/GoogleService-Info.plist
 
+# Release signing & keystore files
+**/key.properties
+key.properties
+*.keystore
+*.jks
+
 # Symbolication related
 app.*.symbols
 
