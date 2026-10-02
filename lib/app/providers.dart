@@ -38,21 +38,34 @@ final currentUserProvider = FutureProvider<UserModel?>((ref) async {
 });
 
 // Selected Group State
-final selectedGroupIdProvider = StateProvider<String?>((ref) => 'group_sunshine_1');
+final selectedGroupIdProvider = StateProvider<String?>((ref) => null);
 
 // Watch User's Groups
 final userGroupsProvider = StreamProvider<List<GroupModel>>((ref) {
   final groupRepo = ref.watch(groupRepositoryProvider);
   final userAsync = ref.watch(currentUserProvider);
-  final userId = userAsync.value?.uid ?? 'user_priya_1';
+  final userId = userAsync.value?.uid ?? '';
+  if (userId.isEmpty) return Stream.value(<GroupModel>[]);
   return groupRepo.watchUserGroups(userId);
 });
 
-// Watch Active Group Details
-final currentGroupProvider = FutureProvider<GroupModel?>((ref) async {
-  final groupId = ref.watch(selectedGroupIdProvider);
-  if (groupId == null) return null;
-  return ref.watch(groupRepositoryProvider).getGroupById(groupId);
+// Watch Active Group Details in Real-Time
+final currentGroupProvider = StreamProvider<GroupModel?>((ref) async* {
+  final userGroupsAsync = ref.watch(userGroupsProvider);
+  final groups = userGroupsAsync.value ?? [];
+  final selectedId = ref.watch(selectedGroupIdProvider);
+  if (selectedId == null) {
+    yield groups.isNotEmpty ? groups.first : null;
+    return;
+  }
+  final found = groups.where((g) => g.groupId == selectedId).firstOrNull;
+  if (found != null) {
+    yield found;
+  } else {
+    final groupRepo = ref.watch(groupRepositoryProvider);
+    final group = await groupRepo.getGroupById(selectedId);
+    yield group ?? (groups.isNotEmpty ? groups.first : null);
+  }
 });
 
 // Watch Group Members
@@ -66,14 +79,49 @@ final groupEventsProvider = StreamProvider.family<List<EventModel>, String>((ref
 });
 
 // Selected Event State
-final selectedEventIdProvider = StateProvider<String?>((ref) => 'event_oct_18');
+final selectedEventIdProvider = StateProvider<String?>((ref) => null);
 
-// Watch Event Details
-final currentEventProvider = FutureProvider<EventModel?>((ref) async {
-  final groupId = ref.watch(selectedGroupIdProvider);
+// Watch Event Details by Event ID
+final eventDetailProvider = StreamProvider.family<EventModel?, String>((ref, eventId) async* {
+  if (eventId.isEmpty) {
+    yield null;
+    return;
+  }
+
+  final selectedGroupId = ref.watch(selectedGroupIdProvider);
+  if (selectedGroupId != null && selectedGroupId.isNotEmpty) {
+    final events = ref.watch(groupEventsProvider(selectedGroupId)).value ?? [];
+    final found = events.where((e) => e.eventId == eventId).firstOrNull;
+    if (found != null) {
+      yield found;
+      return;
+    }
+  }
+
+  final userGroups = ref.watch(userGroupsProvider).value ?? [];
+  for (final group in userGroups) {
+    final events = ref.watch(groupEventsProvider(group.groupId)).value ?? [];
+    final found = events.where((e) => e.eventId == eventId).firstOrNull;
+    if (found != null) {
+      yield found;
+      return;
+    }
+  }
+
+  final eventRepo = ref.watch(eventRepositoryProvider);
+  final event = await eventRepo.getEventById('', eventId);
+  yield event;
+});
+
+// Watch Current Active Event Details in Real-Time
+final currentEventProvider = StreamProvider<EventModel?>((ref) async* {
   final eventId = ref.watch(selectedEventIdProvider);
-  if (groupId == null || eventId == null) return null;
-  return ref.watch(eventRepositoryProvider).getEventById(groupId, eventId);
+  if (eventId == null || eventId.isEmpty) {
+    yield null;
+    return;
+  }
+  final asyncVal = ref.watch(eventDetailProvider(eventId));
+  yield asyncVal.value;
 });
 
 // Watch Event RSVPs

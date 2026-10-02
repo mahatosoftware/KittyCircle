@@ -43,6 +43,7 @@ class GroupModel {
       'frequency': frequency,
       'defaultDurationHours': defaultDurationHours,
       'ownerId': ownerId,
+      'createdBy': ownerId,
       'memberIds': memberIds,
       'adminIds': adminIds,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -50,21 +51,36 @@ class GroupModel {
     };
   }
 
+  static DateTime _parseDate(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    } else if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    } else if (value is DateTime) {
+      return value;
+    }
+    return DateTime.now();
+  }
+
   factory GroupModel.fromMap(Map<String, dynamic> map, String id) {
+    final rawName = map['name'] as String?;
+    final resolvedOwner = map['ownerId']?.toString() ?? map['createdBy']?.toString() ?? '';
     return GroupModel(
       groupId: id,
-      name: map['name'] ?? 'Kitty Group',
-      description: map['description'] ?? '',
-      photoUrl: map['photoUrl'],
+      name: (rawName != null && rawName.trim().isNotEmpty) ? rawName.trim() : 'Kitty Group',
+      description: map['description']?.toString() ?? '',
+      photoUrl: map['photoUrl']?.toString(),
       contributionAmount: (map['contributionAmount'] as num?)?.toDouble() ?? 0.0,
-      currency: map['currency'] ?? '₹',
-      frequency: map['frequency'] ?? 'Monthly',
-      defaultDurationHours: map['defaultDurationHours'] ?? 3,
-      ownerId: map['ownerId'] ?? '',
-      memberIds: List<String>.from(map['memberIds'] ?? []),
-      adminIds: List<String>.from(map['adminIds'] ?? []),
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      currency: map['currency']?.toString() ?? '₹',
+      frequency: map['frequency']?.toString() ?? 'Monthly',
+      defaultDurationHours: (map['defaultDurationHours'] as num?)?.toInt() ?? 3,
+      ownerId: resolvedOwner,
+      memberIds: (map['memberIds'] as List?)?.map((e) => e.toString()).toList() ?? (resolvedOwner.isNotEmpty ? [resolvedOwner] : []),
+      adminIds: (map['adminIds'] as List?)?.map((e) => e.toString()).toList() ?? (resolvedOwner.isNotEmpty ? [resolvedOwner] : []),
+      createdAt: _parseDate(map['createdAt']),
+      updatedAt: _parseDate(map['updatedAt']),
     );
   }
 

@@ -43,7 +43,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          currentEventProvider.overrideWith((ref) => Future.value(longEvent)),
+          currentEventProvider.overrideWith((ref) => Stream.value(longEvent)),
           eventRsvpsProvider('evt_test_1').overrideWith((ref) => Stream.value(<RsvpModel>[])),
           eventTimelineProvider('evt_test_1').overrideWith((ref) => Stream.value(<TimelineItemModel>[])),
           eventFoodPlannerProvider('evt_test_1').overrideWith((ref) => Stream.value(<FoodItemModel>[])),

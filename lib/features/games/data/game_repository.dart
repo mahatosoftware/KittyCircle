@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import '../domain/game_models.dart';
 import '../../../core/constants/app_constants.dart';
 
@@ -8,54 +9,8 @@ class GameRepository {
 
   final Map<String, GameSessionModel> _sessionStore = {};
   final Map<String, List<GameParticipantModel>> _participantStore = {};
-  final Map<String, List<WinnerModel>> _winnerStore = {
-    'event_oct_18': [
-      WinnerModel(
-        winnerId: 'w1',
-        eventId: 'event_oct_18',
-        gameId: 'game_bolly_1',
-        gameName: 'Bollywood Quiz',
-        playerId: 'user_priya_1',
-        playerName: 'Priya Sharma',
-        rank: 1,
-        score: 90,
-        prizeName: 'Luxury Gift Hamper',
-        prizeValue: 1000,
-      ),
-      WinnerModel(
-        winnerId: 'w2',
-        eventId: 'event_oct_18',
-        gameId: 'game_mem_1',
-        gameName: 'Memory Challenge',
-        playerId: 'user_neha_2',
-        playerName: 'Neha Gupta',
-        rank: 2,
-        score: 80,
-        prizeName: 'Chocolate Box',
-        prizeValue: 500,
-      ),
-      WinnerModel(
-        winnerId: 'w3',
-        eventId: 'event_oct_18',
-        gameId: 'game_lucky_1',
-        gameName: 'Lucky Draw',
-        playerId: 'user_kavita_3',
-        playerName: 'Kavita Verma',
-        rank: 3,
-        score: 75,
-        prizeName: 'Scented Candle Set',
-        prizeValue: 350,
-      ),
-    ]
-  };
-
-  final Map<String, List<PrizeModel>> _prizeStore = {
-    'event_oct_18': [
-      PrizeModel(prizeId: 'p1', eventId: 'event_oct_18', name: 'Luxury Gift Hamper', value: 1000, winnerId: 'user_priya_1', winnerName: 'Priya'),
-      PrizeModel(prizeId: 'p2', eventId: 'event_oct_18', name: 'Chocolate Box', value: 500, winnerId: 'user_neha_2', winnerName: 'Neha'),
-      PrizeModel(prizeId: 'p3', eventId: 'event_oct_18', name: 'Scented Candle Set', value: 350, winnerId: 'user_kavita_3', winnerName: 'Kavita'),
-    ]
-  };
+  final Map<String, List<WinnerModel>> _winnerStore = {};
+  final Map<String, List<PrizeModel>> _prizeStore = {};
 
   GameRepository({this._firestore});
 
@@ -77,10 +32,12 @@ class GameRepository {
           _sessionStore[gameId] = model;
           yield model;
         } else {
-          yield _sessionStore[gameId];
+          _sessionStore.remove(gameId);
+          yield null;
         }
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error watching game session: $e');
       yield _sessionStore[gameId];
     }
   }
@@ -113,7 +70,9 @@ class GameRepository {
             .collection(AppConstants.gamesCollection)
             .doc(gameId)
             .set(session.toMap());
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error creating game session in Firestore: $e');
+      }
     }
 
     return session;
@@ -129,39 +88,135 @@ class GameRepository {
             .collection(AppConstants.gamesCollection)
             .doc(session.gameId)
             .set(session.toMap(), SetOptions(merge: true));
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error updating game session in Firestore: $e');
+      }
     }
   }
 
   // Participants
   Stream<List<GameParticipantModel>> watchParticipants(String gameId) async* {
     yield _participantStore[gameId] ?? [];
+
+    if (Firebase.apps.isNotEmpty || _firestore != null) {
+      try {
+        final db = _firestore ?? FirebaseFirestore.instance;
+        final snapStream = db
+            .collection(AppConstants.gamesCollection)
+            .doc(gameId)
+            .collection(AppConstants.participantsCollection)
+            .snapshots();
+
+        await for (final snap in snapStream) {
+          final list = snap.docs.map((d) => GameParticipantModel.fromMap(d.data(), d.id)).toList();
+          _participantStore[gameId] = list;
+          yield list;
+        }
+      } catch (e) {
+        debugPrint('Error watching participants: $e');
+        yield _participantStore[gameId] ?? [];
+      }
+    }
   }
 
   Future<void> joinGameSession(String gameId, String userId, String displayName, {String? photoUrl}) async {
+    final p = GameParticipantModel(userId: userId, gameId: gameId, displayName: displayName, photoUrl: photoUrl);
     final list = _participantStore.putIfAbsent(gameId, () => []);
-    if (!list.any((p) => p.userId == userId)) {
-      final p = GameParticipantModel(userId: userId, gameId: gameId, displayName: displayName, photoUrl: photoUrl);
+    if (!list.any((item) => item.userId == userId)) {
       list.add(p);
+    }
+
+    if (Firebase.apps.isNotEmpty || _firestore != null) {
+      try {
+        final db = _firestore ?? FirebaseFirestore.instance;
+        await db
+            .collection(AppConstants.gamesCollection)
+            .doc(gameId)
+            .collection(AppConstants.participantsCollection)
+            .doc(userId)
+            .set(p.toMap());
+      } catch (e) {
+        debugPrint('Error joining game session in Firestore: $e');
+      }
     }
   }
 
   // Winners
   Stream<List<WinnerModel>> watchEventWinners(String eventId) async* {
     yield _winnerStore[eventId] ?? [];
+
+    if (Firebase.apps.isNotEmpty || _firestore != null) {
+      try {
+        final db = _firestore ?? FirebaseFirestore.instance;
+        final snapStream = db
+            .collection(AppConstants.winnersCollection)
+            .where('eventId', isEqualTo: eventId)
+            .snapshots();
+
+        await for (final snap in snapStream) {
+          final list = snap.docs.map((d) => WinnerModel.fromMap(d.data(), d.id)).toList();
+          _winnerStore[eventId] = list;
+          yield list;
+        }
+      } catch (e) {
+        debugPrint('Error watching winners: $e');
+        yield _winnerStore[eventId] ?? [];
+      }
+    }
   }
 
   Future<void> saveWinners(String eventId, List<WinnerModel> winners) async {
-    final existing = _winnerStore.putIfAbsent(eventId, () => []);
-    existing.addAll(winners);
+    _winnerStore[eventId] = winners;
+
+    if (Firebase.apps.isNotEmpty || _firestore != null) {
+      try {
+        final db = _firestore ?? FirebaseFirestore.instance;
+        final batch = db.batch();
+        for (final w in winners) {
+          final docRef = db.collection(AppConstants.winnersCollection).doc('${eventId}_${w.playerId}');
+          batch.set(docRef, w.toMap());
+        }
+        await batch.commit();
+      } catch (e) {
+        debugPrint('Error saving winners to Firestore: $e');
+      }
+    }
   }
 
   // Prizes
   Stream<List<PrizeModel>> watchEventPrizes(String eventId) async* {
     yield _prizeStore[eventId] ?? [];
+
+    if (Firebase.apps.isNotEmpty || _firestore != null) {
+      try {
+        final db = _firestore ?? FirebaseFirestore.instance;
+        final snapStream = db
+            .collection('prizes')
+            .where('eventId', isEqualTo: eventId)
+            .snapshots();
+
+        await for (final snap in snapStream) {
+          final list = snap.docs.map((d) => PrizeModel.fromMap(d.data(), d.id)).toList();
+          _prizeStore[eventId] = list;
+          yield list;
+        }
+      } catch (e) {
+        debugPrint('Error watching prizes: $e');
+        yield _prizeStore[eventId] ?? [];
+      }
+    }
   }
 
   Future<void> addPrize(PrizeModel prize) async {
     _prizeStore.putIfAbsent(prize.eventId, () => []).add(prize);
+
+    if (Firebase.apps.isNotEmpty || _firestore != null) {
+      try {
+        final db = _firestore ?? FirebaseFirestore.instance;
+        await db.collection('prizes').doc(prize.prizeId).set(prize.toMap());
+      } catch (e) {
+        debugPrint('Error adding prize to Firestore: $e');
+      }
+    }
   }
 }

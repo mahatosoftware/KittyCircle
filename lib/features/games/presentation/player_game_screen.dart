@@ -76,49 +76,55 @@ class _PlayerGameScreenState extends ConsumerState<PlayerGameScreen> {
         final session = snapshot.data ??
             GameSessionModel(
               gameId: widget.gameId,
-              eventId: 'event_oct_18',
-              groupId: 'group_sunshine_1',
+              eventId: ref.watch(selectedEventIdProvider) ?? '',
+              groupId: ref.watch(selectedGroupIdProvider) ?? '',
               gameName: 'Party Game',
               type: GameType.bollywoodQuiz,
-              hostUserId: 'user_priya_1',
+              hostUserId: ref.watch(currentUserProvider).value?.uid ?? '',
             );
 
         return Scaffold(
           appBar: AppBar(
             title: Text('${session.gameName} 🎮'),
           ),
-          body: SingleChildScrollView(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 20,
-              bottom: 20 + MediaQuery.paddingOf(context).bottom,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // SCORE CARD HEADER
-                AppCard(
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'ROUND ${session.currentRound} OF ${session.totalRounds}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
-                      ),
-                      Text(
-                        'Your Score: $_playerScore pts',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary),
-                      ),
-                    ],
-                  ),
+          body: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 20,
+                  bottom: 20 + MediaQuery.paddingOf(context).bottom,
                 ),
-                const SizedBox(height: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // SCORE CARD HEADER
+                    AppCard(
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'ROUND ${session.currentRound} OF ${session.totalRounds}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 13),
+                          ),
+                          Text(
+                            'Your Score: $_playerScore pts',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
 
-                // GAME-TYPE SPECIFIC PLAYER WIDGET
-                _buildGameSpecificPlayerContent(session),
-              ],
+                    // GAME-TYPE SPECIFIC PLAYER WIDGET
+                    _buildGameSpecificPlayerContent(session),
+                  ],
+                ),
+              ),
             ),
           ),
         );

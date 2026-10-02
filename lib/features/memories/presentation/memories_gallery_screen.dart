@@ -61,11 +61,11 @@ class MemoriesGalleryScreen extends ConsumerWidget {
                   final memory = MemoryModel(
                     memoryId: 'm_${DateTime.now().millisecondsSinceEpoch}',
                     groupId: groupId,
-                    eventTitle: 'October Kitty',
+                    eventTitle: 'Kitty Event',
                     imageUrl: 'https://picsum.photos/seed/${DateTime.now().millisecondsSinceEpoch}/600/600',
                     caption: captionCtrl.text.trim().isNotEmpty ? captionCtrl.text.trim() : 'Party Memories 🎉',
-                    uploadedByUserId: user?.uid ?? 'user_priya_1',
-                    uploadedByUserName: user?.displayName ?? 'Priya',
+                    uploadedByUserId: user?.uid ?? '',
+                    uploadedByUserName: (user != null && user.displayName.isNotEmpty) ? user.displayName : 'Member',
                   );
 
                   await ref.read(memoryRepositoryProvider).addMemory(memory);
@@ -109,7 +109,18 @@ class MemoriesGalleryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final memoriesAsync = ref.watch(groupMemoriesProvider(groupId));
+    final targetGroupId = groupId.isNotEmpty ? groupId : (ref.watch(selectedGroupIdProvider) ?? '');
+    if (targetGroupId.isEmpty) {
+      return const Scaffold(
+        body: EmptyState(
+          title: 'No Kitty Selected',
+          description: 'Select or create a Kitty Group to view party memories!',
+          icon: Icons.photo_library_outlined,
+        ),
+      );
+    }
+
+    final memoriesAsync = ref.watch(groupMemoriesProvider(targetGroupId));
 
     return Scaffold(
       body: memoriesAsync.when(
@@ -126,16 +137,23 @@ class MemoriesGalleryScreen extends ConsumerWidget {
             );
           }
 
-          return GridView.builder(
-            padding: const EdgeInsets.all(20),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
-              childAspectRatio: 0.9,
-            ),
-            itemCount: memories.length,
-            itemBuilder: (context, index) {
+          final width = MediaQuery.sizeOf(context).width;
+          final crossCount = width >= 900 ? 4 : (width >= 600 ? 3 : 2);
+
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1200),
+              child: GridView.builder(
+                padding: const EdgeInsets.all(20),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossCount,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: 0.9,
+                ),
+                itemCount: memories.length,
+                itemBuilder: (context, index) {
               final mem = memories[index];
               return InkWell(
                 onTap: () => _openLightbox(context, mem),
@@ -180,8 +198,10 @@ class MemoriesGalleryScreen extends ConsumerWidget {
                 ),
               );
             },
-          );
-        },
+          ),
+        ),
+      );
+    },
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showUploadModal(context, ref),

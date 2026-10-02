@@ -23,9 +23,13 @@ class ContributionScreen extends ConsumerWidget {
           final collectedTotal = items.fold<double>(0, (sum, i) => sum + i.amountPaid);
           final pendingTotal = expectedTotal - collectedTotal;
 
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 950),
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
               // SUMMARY HEADER CARD
               AppCard(
                 gradient: AppColors.primaryGradient,
@@ -126,7 +130,9 @@ class ContributionScreen extends ConsumerWidget {
                 );
               }),
             ],
-          );
+          ),
+        ),
+      );
         },
       ),
     );

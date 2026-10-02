@@ -33,86 +33,92 @@ class HostScheduleScreen extends ConsumerWidget {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: schedule.length,
-            itemBuilder: (context, index) {
-              final item = schedule[index];
-              final isCurrent = index == 0;
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: schedule.length,
+                itemBuilder: (context, index) {
+                  final item = schedule[index];
+                  final isCurrent = index == 0;
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: AppCard(
-                  backgroundColor: isCurrent ? AppColors.primary.withValues(alpha: 0.08) : null,
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isCurrent ? AppColors.gold : AppColors.primaryLight.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          isCurrent ? '👑' : '📅',
-                          style: const TextStyle(fontSize: 22),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.monthYear,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textMuted,
-                              ),
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: AppCard(
+                      backgroundColor: isCurrent ? AppColors.primary.withValues(alpha: 0.08) : null,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isCurrent ? AppColors.gold : AppColors.primaryLight.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item.hostName,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
-                              ),
+                            child: Text(
+                              isCurrent ? '👑' : '📅',
+                              style: const TextStyle(fontSize: 22),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              DateFormat('EEEE, dd MMMM').format(item.scheduledDate),
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (isCurrent)
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            final link = DeepLinkService.createGroupInviteLink(groupId);
-                            WhatsAppService.shareNextKitty(
-                              groupName: groupAsync.value?.name ?? 'Sunshine Ladies',
-                              nextHost: item.hostName,
-                              date: DateFormat('dd MMMM yyyy').format(item.scheduledDate),
-                              nextKittyLink: link,
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Host reminder sent for ${item.hostName}! 🎉')),
-                            );
-                          },
-                          icon: const Icon(Icons.send, size: 16),
-                          label: const Text('Notify Host'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.monthYear,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  item.hostName,
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  DateFormat('EEEE, dd MMMM').format(item.scheduledDate),
+                                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isCurrent)
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                final link = DeepLinkService.createGroupInviteLink(groupId);
+                                WhatsAppService.shareNextKitty(
+                                  groupName: groupAsync.value?.name ?? 'Sunshine Ladies',
+                                  nextHost: item.hostName,
+                                  date: DateFormat('dd MMMM yyyy').format(item.scheduledDate),
+                                  nextKittyLink: link,
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Host reminder sent for ${item.hostName}! 🎉')),
+                                );
+                              },
+                              icon: const Icon(Icons.send, size: 16),
+                              label: const Text('Notify Host'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           );
         },
       ),

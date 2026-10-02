@@ -30,19 +30,8 @@ class _LiveGameHostScreenState extends ConsumerState<LiveGameHostScreen> {
   bool _isSpinning = false;
   int _highlightedIndex = 0;
 
-  final Map<String, int> _playerScores = {
-    'user_priya_1': 90,
-    'user_neha_2': 80,
-    'user_kavita_3': 75,
-    'user_ritu_4': 60,
-  };
-
-  final Map<String, String> _playerNames = {
-    'user_priya_1': 'Priya Sharma',
-    'user_neha_2': 'Neha Gupta',
-    'user_kavita_3': 'Kavita Verma',
-    'user_ritu_4': 'Ritu Kapoor',
-  };
+  final Map<String, int> _playerScores = {};
+  final Map<String, String> _playerNames = {};
 
   @override
   void initState() {
@@ -97,7 +86,7 @@ class _LiveGameHostScreenState extends ConsumerState<LiveGameHostScreen> {
   }
 
   void _spinLuckyDraw() {
-    final participants = LuckyDrawGame.defaultParticipants;
+    final participants = _playerNames.values.toList();
     if (participants.isEmpty) return;
 
     setState(() {
@@ -136,7 +125,7 @@ class _LiveGameHostScreenState extends ConsumerState<LiveGameHostScreen> {
   void _finishGame(GameSessionModel session) async {
     _timer?.cancel();
     await _gameInstance.end();
-    final eventId = ref.read(selectedEventIdProvider) ?? 'event_oct_18';
+    final eventId = ref.read(selectedEventIdProvider) ?? session.eventId;
     final participantMap = _playerNames.map(
       (id, name) => MapEntry(
         id,
@@ -161,6 +150,22 @@ class _LiveGameHostScreenState extends ConsumerState<LiveGameHostScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final activeGroupId = ref.watch(selectedGroupIdProvider);
+    final groupMembers = activeGroupId != null ? (ref.watch(groupMembersProvider(activeGroupId)).value ?? []) : [];
+    final currentUser = ref.watch(currentUserProvider).value;
+
+    if (_playerNames.isEmpty) {
+      if (groupMembers.isNotEmpty) {
+        for (final m in groupMembers) {
+          _playerNames[m.userId] = m.displayName;
+          _playerScores[m.userId] = 0;
+        }
+      } else if (currentUser != null) {
+        _playerNames[currentUser.uid] = currentUser.displayName.isNotEmpty ? currentUser.displayName : 'Host';
+        _playerScores[currentUser.uid] = 0;
+      }
+    }
+
     final sessionAsync = ref.watch(gameRepositoryProvider).watchGameSession(widget.gameId);
 
     return StreamBuilder<GameSessionModel?>(
@@ -169,11 +174,11 @@ class _LiveGameHostScreenState extends ConsumerState<LiveGameHostScreen> {
         final session = snapshot.data ??
             GameSessionModel(
               gameId: widget.gameId,
-              eventId: 'event_oct_18',
-              groupId: 'group_sunshine_1',
+              eventId: ref.watch(selectedEventIdProvider) ?? '',
+              groupId: activeGroupId ?? '',
               gameName: 'Party Game',
               type: GameType.bollywoodQuiz,
-              hostUserId: 'user_priya_1',
+              hostUserId: currentUser?.uid ?? '',
             );
 
         _initGameForSession(session);
@@ -193,7 +198,11 @@ class _LiveGameHostScreenState extends ConsumerState<LiveGameHostScreen> {
               ),
             ],
           ),
-          body: SingleChildScrollView(
+          body: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: SingleChildScrollView(
             padding: EdgeInsets.only(
               left: 20,
               right: 20,
@@ -340,7 +349,9 @@ class _LiveGameHostScreenState extends ConsumerState<LiveGameHostScreen> {
               ],
             ),
           ),
-        );
+        ),
+      ),
+    );
       },
     );
   }
@@ -348,7 +359,7 @@ class _LiveGameHostScreenState extends ConsumerState<LiveGameHostScreen> {
   Widget _buildGameSpecificHostContent(GameSessionModel session) {
     switch (session.type) {
       case GameType.luckyDraw:
-        final participants = LuckyDrawGame.defaultParticipants;
+        final participants = _playerNames.values.toList();
         return Column(
           children: [
             const Text('🎁 LUCKY DRAW WHEEL', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),

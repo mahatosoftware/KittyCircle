@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class UserModel {
   final String uid;
@@ -8,6 +9,8 @@ class UserModel {
   final String? email;
   final String city;
   final String language;
+  final DateTime? birthday;
+  final DateTime? anniversary;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isActive;
@@ -20,11 +23,16 @@ class UserModel {
     this.email,
     this.city = 'Bengaluru',
     this.language = 'en',
+    this.birthday,
+    this.anniversary,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.isActive = true,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
+
+  String? get birthdayString => birthday != null ? DateFormat('dd MMMM').format(birthday!) : null;
+  String? get anniversaryString => anniversary != null ? DateFormat('dd MMMM').format(anniversary!) : null;
 
   Map<String, dynamic> toMap() {
     return {
@@ -35,6 +43,8 @@ class UserModel {
       'email': email,
       'city': city,
       'language': language,
+      'birthday': birthday != null ? Timestamp.fromDate(birthday!) : null,
+      'anniversary': anniversary != null ? Timestamp.fromDate(anniversary!) : null,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isActive': isActive,
@@ -50,6 +60,8 @@ class UserModel {
       email: map['email'],
       city: map['city'] ?? 'Bengaluru',
       language: map['language'] ?? 'en',
+      birthday: (map['birthday'] as Timestamp?)?.toDate(),
+      anniversary: (map['anniversary'] as Timestamp?)?.toDate(),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isActive: map['isActive'] ?? true,
@@ -63,6 +75,8 @@ class UserModel {
     String? email,
     String? city,
     String? language,
+    DateTime? birthday,
+    DateTime? anniversary,
     bool? isActive,
   }) {
     return UserModel(
@@ -73,6 +87,8 @@ class UserModel {
       email: email ?? this.email,
       city: city ?? this.city,
       language: language ?? this.language,
+      birthday: birthday ?? this.birthday,
+      anniversary: anniversary ?? this.anniversary,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
       isActive: isActive ?? this.isActive,

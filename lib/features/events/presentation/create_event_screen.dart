@@ -27,31 +27,21 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   final TimeOfDay _startTime = const TimeOfDay(hour: 16, minute: 0);
   final TimeOfDay _endTime = const TimeOfDay(hour: 19, minute: 0);
   String _selectedTheme = 'Bollywood';
-  String _selectedHostId = 'user_priya_1';
-  String _selectedHostName = 'Priya Sharma';
+  String _selectedHostId = '';
+  String _selectedHostName = '';
   bool _isLoading = false;
 
-  final Map<String, String> _hostOptions = {
-    'user_priya_1': 'Priya Sharma',
-    'user_neha_2': 'Neha Gupta',
-    'user_kavita_3': 'Kavita Verma',
-    'user_ritu_4': 'Ritu Kapoor',
-    'user_anjali_5': 'Anjali Singh',
-  };
+  final Map<String, String> _hostOptions = {};
 
   @override
   void initState() {
     super.initState();
     final user = ref.read(currentUserProvider).value;
-    if (user != null && user.uid.isNotEmpty) {
-      final name = user.displayName.isNotEmpty ? user.displayName : 'Host User';
-      _hostOptions[user.uid] = name;
-      _selectedHostId = user.uid;
-      _selectedHostName = name;
-    } else if (_hostOptions.isNotEmpty) {
-      _selectedHostId = _hostOptions.keys.first;
-      _selectedHostName = _hostOptions.values.first;
-    }
+    final name = (user != null && user.displayName.isNotEmpty) ? user.displayName : 'Host User';
+    final uid = user?.uid ?? 'guest_host';
+    _hostOptions[uid] = name;
+    _selectedHostId = uid;
+    _selectedHostName = name;
   }
 
   final List<String> _themes = [
@@ -75,7 +65,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
 
     setState(() => _isLoading = true);
 
-    final groupId = ref.read(selectedGroupIdProvider) ?? 'group_sunshine_1';
+    final groupId = ref.read(selectedGroupIdProvider) ?? '';
     final user = ref.read(currentUserProvider).value;
 
     final eventId = 'event_${DateTime.now().millisecondsSinceEpoch}';
@@ -94,7 +84,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       dressCode: _dressCodeController.text.trim(),
       foodNotes: _foodNotesController.text.trim(),
       description: _descController.text.trim(),
-      createdBy: user?.uid ?? 'user_priya_1',
+      createdBy: user?.uid ?? '',
       status: EventStatus.upcoming,
     );
 
@@ -104,6 +94,9 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     setState(() => _isLoading = false);
 
     if (mounted) {
+      if (groupId.isNotEmpty) {
+        ref.invalidate(groupEventsProvider(groupId));
+      }
       context.go('/event/$eventId');
     }
   }
@@ -118,7 +111,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
       appBar: AppBar(
         title: const Text('Create Kitty Event'),
       ),
-      body: SingleChildScrollView(
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 750),
+          child: SingleChildScrollView(
         padding: EdgeInsets.only(
           left: 20,
           right: 20,
@@ -206,7 +203,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
                 controller: _venueController,
                 decoration: const InputDecoration(
                   labelText: 'Venue Name *',
-                  hintText: 'Priya\'s Residence',
+                  hintText: 'Community Center / Residence',
                   prefixIcon: Icon(Icons.place),
                 ),
                 validator: (val) => val == null || val.trim().isEmpty ? 'Enter venue' : null,
@@ -242,6 +239,8 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

@@ -50,41 +50,47 @@ class ThemeLibraryScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Party Theme Library 🎭'),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: partyThemes.length,
-        itemBuilder: (context, index) {
-          final theme = partyThemes[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: AppCard(
-              child: ExpansionTile(
-                leading: Text(theme['emoji'], style: const TextStyle(fontSize: 32)),
-                title: Text(theme['title'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                subtitle: Text('Dress code: ${theme['dressCode']}', maxLines: 1, overflow: TextOverflow.ellipsis),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _ThemeDetailRow(icon: Icons.checkroom, title: 'Dress Code', desc: theme['dressCode']),
-                        const SizedBox(height: 8),
-                        _ThemeDetailRow(icon: Icons.brush, title: 'Decoration', desc: theme['decor']),
-                        const SizedBox(height: 8),
-                        _ThemeDetailRow(icon: Icons.restaurant, title: 'Food & Snacks', desc: theme['food']),
-                        const SizedBox(height: 8),
-                        _ThemeDetailRow(icon: Icons.sports_esports, title: 'Suggested Games', desc: theme['games']),
-                        const SizedBox(height: 8),
-                        _ThemeDetailRow(icon: Icons.card_giftcard, title: 'Prize Ideas', desc: theme['prizes']),
-                      ],
-                    ),
-                  )
-                ],
-              ),
-            ),
-          );
-        },
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 850),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: partyThemes.length,
+            itemBuilder: (context, index) {
+              final theme = partyThemes[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: AppCard(
+                  child: ExpansionTile(
+                    leading: Text(theme['emoji'], style: const TextStyle(fontSize: 32)),
+                    title: Text(theme['title'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    subtitle: Text('Dress code: ${theme['dressCode']}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _ThemeDetailRow(icon: Icons.checkroom, title: 'Dress Code', desc: theme['dressCode']),
+                            const SizedBox(height: 8),
+                            _ThemeDetailRow(icon: Icons.brush, title: 'Decoration', desc: theme['decor']),
+                            const SizedBox(height: 8),
+                            _ThemeDetailRow(icon: Icons.restaurant, title: 'Food & Snacks', desc: theme['food']),
+                            const SizedBox(height: 8),
+                            _ThemeDetailRow(icon: Icons.sports_esports, title: 'Suggested Games', desc: theme['games']),
+                            const SizedBox(height: 8),
+                            _ThemeDetailRow(icon: Icons.card_giftcard, title: 'Prize Ideas', desc: theme['prizes']),
+                          ],
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }

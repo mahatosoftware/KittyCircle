@@ -85,7 +85,11 @@ class _WinnerDeclarationScreenState extends ConsumerState<WinnerDeclarationScree
               final second = winners.firstWhere((w) => w.rank == 2, orElse: () => winners.length > 1 ? winners[1] : winners[0]);
               final third = winners.firstWhere((w) => w.rank == 3, orElse: () => winners.length > 2 ? winners[2] : winners[0]);
 
-              return SingleChildScrollView(
+              return Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: SingleChildScrollView(
                 padding: EdgeInsets.only(
                   left: 20,
                   right: 20,
@@ -174,7 +178,9 @@ class _WinnerDeclarationScreenState extends ConsumerState<WinnerDeclarationScree
                     ),
                   ],
                 ),
-              );
+              ),
+            ),
+          );
             },
           ),
         ],

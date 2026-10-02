@@ -12,8 +12,7 @@ class MainNavigationShell extends StatelessWidget {
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/kitties') || location.startsWith('/group')) return 1;
     if (location.startsWith('/games') || location.startsWith('/game')) return 2;
-    if (location.startsWith('/memories')) return 3;
-    if (location.startsWith('/profile')) return 4;
+    if (location.startsWith('/profile')) return 3;
     return 0;
   }
 
@@ -29,9 +28,6 @@ class MainNavigationShell extends StatelessWidget {
         context.go('/games');
         break;
       case 3:
-        context.go('/memories');
-        break;
-      case 4:
         context.go('/profile');
         break;
     }
@@ -40,6 +36,50 @@ class MainNavigationShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectedIndex = _calculateSelectedIndex(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final isTablet = width >= 600;
+
+    if (isTablet) {
+      final isWide = width >= 900;
+      return Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: selectedIndex,
+              onDestinationSelected: (idx) => _onItemTapped(idx, context),
+              labelType: isWide ? NavigationRailLabelType.all : NavigationRailLabelType.selected,
+              extended: isWide,
+              selectedIconTheme: const IconThemeData(color: AppColors.primary),
+              selectedLabelTextStyle: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+              destinations: const [
+                NavigationRailDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: Text('Home'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.groups_outlined),
+                  selectedIcon: Icon(Icons.groups),
+                  label: Text('Kitties'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.sports_esports_outlined),
+                  selectedIcon: Icon(Icons.sports_esports),
+                  label: Text('Games'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: Text('Profile'),
+                ),
+              ],
+            ),
+            const VerticalDivider(thickness: 1, width: 1),
+            Expanded(child: child),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       body: child,
@@ -64,11 +104,6 @@ class MainNavigationShell extends StatelessWidget {
             icon: Icon(Icons.sports_esports_outlined),
             activeIcon: Icon(Icons.sports_esports),
             label: 'Games',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.photo_library_outlined),
-            activeIcon: Icon(Icons.photo_library),
-            label: 'Memories',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),

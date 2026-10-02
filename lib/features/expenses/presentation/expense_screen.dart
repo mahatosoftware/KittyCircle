@@ -60,13 +60,14 @@ class ExpenseScreen extends ConsumerWidget {
                 text: 'Record Expense',
                 onPressed: () async {
                   if (amountCtrl.text.isNotEmpty) {
+                    final user = ref.read(currentUserProvider).value;
                     final exp = ExpenseModel(
                       expenseId: 'e_${DateTime.now().millisecondsSinceEpoch}',
                       eventId: eventId,
                       category: category,
                       description: descCtrl.text.trim(),
                       amount: double.parse(amountCtrl.text.trim()),
-                      paidBy: 'Priya',
+                      paidBy: (user != null && user.displayName.isNotEmpty) ? user.displayName : 'Host',
                     );
                     await ref.read(expenseRepositoryProvider).addExpense(exp);
                     if (ctx.mounted) Navigator.pop(ctx);
@@ -82,6 +83,14 @@ class ExpenseScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (eventId.isEmpty) {
+      return const EmptyState(
+        title: 'No Event Selected',
+        description: 'Create or select an event to manage party expenses.',
+        icon: Icons.receipt_long_outlined,
+      );
+    }
+
     final expensesAsync = ref.watch(eventExpensesProvider(eventId));
     final budgetAsync = ref.watch(eventBudgetProvider(eventId));
 
@@ -96,9 +105,13 @@ class ExpenseScreen extends ConsumerWidget {
           final left = totalBudget - totalSpent;
           final progress = totalBudget > 0 ? (totalSpent / totalBudget).clamp(0.0, 1.0) : 0.0;
 
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 950),
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
               // BUDGET PROGRESS CARD
               AppCard(
                 child: Column(
@@ -163,7 +176,9 @@ class ExpenseScreen extends ConsumerWidget {
                 );
               }),
             ],
-          );
+          ),
+        ),
+      );
         },
       ),
     );

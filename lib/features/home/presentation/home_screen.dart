@@ -5,7 +5,10 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/common_widgets.dart';
+import '../../../core/widgets/app_buttons.dart';
 import '../../../app/providers.dart';
+import '../../groups/domain/group_model.dart';
+import '../../events/domain/event_model.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -14,10 +17,11 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(currentUserProvider);
     final userGroupsAsync = ref.watch(userGroupsProvider);
-    final selectedGroupId = ref.watch(selectedGroupIdProvider) ?? 'group_sunshine_1';
-    final groupMemoriesAsync = ref.watch(groupMemoriesProvider(selectedGroupId));
+    final selectedGroupId = ref.watch(selectedGroupIdProvider);
 
-    final userName = userAsync.value?.displayName ?? 'Priya';
+    final userName = userAsync.value?.displayName.isNotEmpty == true
+        ? userAsync.value!.displayName
+        : 'Kitty Member';
 
     return Scaffold(
       body: SafeArea(
@@ -25,12 +29,16 @@ class HomeScreen extends ConsumerWidget {
           onRefresh: () async {
             ref.invalidate(userGroupsProvider);
           },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 950),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 // Greeting Header
                 Row(
                   children: [
@@ -41,7 +49,7 @@ class HomeScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Good morning, $userName 👋',
+                            'Good day, $userName 👋',
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -71,134 +79,22 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // YOUR NEXT KITTY CARD (Featured)
-                const Text(
-                  'YOUR NEXT KITTY',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textMuted,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                AppCard(
-                  gradient: AppColors.partyCardGradient,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.25),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.celebration, color: AppColors.gold, size: 16),
-                                SizedBox(width: 4),
-                                Text(
-                                  'UPCOMING',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Text(
-                            '🌸 Sunshine Ladies',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'October Bollywood Kitty',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          const Icon(Icons.calendar_month, color: AppColors.gold, size: 18),
-                          const SizedBox(width: 6),
-                          Text(
-                            DateFormat('dd MMMM yyyy').format(DateTime(2026, 10, 18)),
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
-                          ),
-                          const SizedBox(width: 16),
-                          const Icon(Icons.access_time, color: AppColors.gold, size: 18),
-                          const SizedBox(width: 6),
-                          const Text(
-                            '4:00 PM – 7:00 PM',
-                            style: TextStyle(color: Colors.white, fontSize: 14),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Row(
-                        children: [
-                          Icon(Icons.location_on, color: AppColors.gold, size: 18),
-                          SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              'Priya\'s Residence (Indiranagar)',
-                              style: TextStyle(color: Colors.white, fontSize: 14),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                ref.read(selectedEventIdProvider.notifier).state = 'event_oct_18';
-                                context.push('/event/event_oct_18');
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: AppColors.primary,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                              child: const Text('View Event', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                context.push('/games');
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side: const BorderSide(color: Colors.white, width: 1.5),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                              child: const Text('Party Games 🎮', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                // FEATURED CONTENT / UPCOMING KITTY CARD
+                userGroupsAsync.when(
+                  loading: () => const LoadingState(),
+                  error: (e, s) => ErrorState(message: e.toString()),
+                  data: (groups) {
+                    if (groups.isEmpty) {
+                      return _buildGettingStartedCard(context);
+                    }
+
+                    final activeGroup = groups.firstWhere(
+                      (g) => g.groupId == selectedGroupId,
+                      orElse: () => groups.first,
+                    );
+
+                    return _buildUpcomingKittySection(context, ref, activeGroup);
+                  },
                 ),
                 const SizedBox(height: 28),
 
@@ -238,9 +134,7 @@ class HomeScreen extends ConsumerWidget {
                       icon: Icons.qr_code_scanner,
                       label: 'Join Kitty',
                       color: const Color(0xFF1E88E5),
-                      onTap: () {
-                        context.push('/join/group/group_sunshine_1');
-                      },
+                      onTap: () => _showJoinKittyDialog(context),
                     ),
                   ],
                 ),
@@ -266,8 +160,8 @@ class HomeScreen extends ConsumerWidget {
                   ],
                 ),
                 userGroupsAsync.when(
-                  loading: () => const LoadingState(),
-                  error: (e, s) => ErrorState(message: e.toString()),
+                  loading: () => const SizedBox(),
+                  error: (e, s) => const SizedBox(),
                   data: (groups) {
                     if (groups.isEmpty) {
                       return EmptyState(
@@ -280,9 +174,11 @@ class HomeScreen extends ConsumerWidget {
                     }
                     return Column(
                       children: groups.map((g) {
+                        final isSelected = g.groupId == (selectedGroupId ?? groups.first.groupId);
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: AppCard(
+                            backgroundColor: isSelected ? AppColors.primary.withValues(alpha: 0.08) : Colors.white,
                             onTap: () {
                               ref.read(selectedGroupIdProvider.notifier).state = g.groupId;
                               context.push('/group/${g.groupId}');
@@ -293,8 +189,8 @@ class HomeScreen extends ConsumerWidget {
                                   radius: 26,
                                   backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
                                   child: Text(
-                                    g.name.substring(0, 2),
-                                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                                    g.name.isNotEmpty ? g.name.substring(0, 1) : '🌸',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 18),
                                   ),
                                 ),
                                 const SizedBox(width: 14),
@@ -330,79 +226,290 @@ class HomeScreen extends ConsumerWidget {
                     );
                   },
                 ),
-                const SizedBox(height: 24),
-
-                // RECENT MEMORIES HIGHLIGHT
-                const Text(
-                  'PARTY MEMORIES',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textMuted,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                groupMemoriesAsync.when(
-                  loading: () => const SizedBox(),
-                  error: (e, s) => const SizedBox(),
-                  data: (memories) {
-                    if (memories.isEmpty) {
-                      return EmptyState(
-                        title: 'No Memories Yet',
-                        description: 'Photos from your kitty parties will appear here!',
-                        icon: Icons.photo_library_outlined,
-                      );
-                    }
-                    return SizedBox(
-                      height: 140,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: memories.length,
-                        itemBuilder: (context, index) {
-                          final mem = memories[index];
-                          return Container(
-                            width: 130,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(14),
-                              image: DecorationImage(
-                                image: NetworkImage(mem.imageUrl),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(14),
-                                gradient: LinearGradient(
-                                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                ),
-                              ),
-                              padding: const EdgeInsets.all(8),
-                              alignment: Alignment.bottomLeft,
-                              child: Text(
-                                mem.eventTitle,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
               ],
             ),
           ),
         ),
+      ),
+    ),
+  ),
+);
+}
+
+  Widget _buildGettingStartedCard(BuildContext context) {
+    return AppCard(
+      gradient: AppColors.partyCardGradient,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.stars, color: AppColors.gold, size: 16),
+                SizedBox(width: 4),
+                Text(
+                  'WELCOME TO KITTYCIRCLE',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Organize Monthly Kitties ✨',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Manage contribution pools, host rotation schedules, themes, food planners and play multiplayer party games with your friends!',
+            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: PrimaryButton(
+                  text: 'Create Kitty Group 🎉',
+                  onPressed: () => context.push('/create-group'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpcomingKittySection(BuildContext context, WidgetRef ref, GroupModel activeGroup) {
+    final eventsAsync = ref.watch(groupEventsProvider(activeGroup.groupId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'YOUR NEXT KITTY',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textMuted,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 10),
+        eventsAsync.when(
+          loading: () => const LoadingState(),
+          error: (e, s) => ErrorState(message: e.toString()),
+          data: (events) {
+            final upcomingEvent = events.where((e) => e.status == EventStatus.upcoming).firstOrNull;
+
+            if (upcomingEvent == null) {
+              return AppCard(
+                gradient: AppColors.primaryGradient,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activeGroup.name,
+                      style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'No Upcoming Events Scheduled',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Schedule the next kitty party gathering for your group!',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/create-event'),
+                      icon: const Icon(Icons.event),
+                      label: const Text('Schedule Event 🎉', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return AppCard(
+              gradient: AppColors.partyCardGradient,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.celebration, color: AppColors.gold, size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              'UPCOMING',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        activeGroup.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    upcomingEvent.title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_month, color: AppColors.gold, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        DateFormat('dd MMMM yyyy').format(upcomingEvent.date),
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                      const SizedBox(width: 16),
+                      const Icon(Icons.access_time, color: AppColors.gold, size: 18),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${upcomingEvent.startTime} – ${upcomingEvent.endTime}',
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, color: AppColors.gold, size: 18),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          upcomingEvent.venue,
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            ref.read(selectedGroupIdProvider.notifier).state = activeGroup.groupId;
+                            ref.read(selectedEventIdProvider.notifier).state = upcomingEvent.eventId;
+                            context.push('/event/${upcomingEvent.eventId}');
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('View Event', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            context.push('/games');
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white, width: 1.5),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Party Games 🎮', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showJoinKittyDialog(BuildContext context) {
+    final codeCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Join Kitty Group 🎟️'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter group invite code or group ID below:'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: codeCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Group Code / ID',
+                hintText: 'e.g. group_123',
+                prefixIcon: Icon(Icons.qr_code),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              final id = codeCtrl.text.trim();
+              Navigator.pop(ctx);
+              if (id.isNotEmpty) {
+                context.push('/join/group/$id');
+              }
+            },
+            child: const Text('Join'),
+          ),
+        ],
       ),
     );
   }

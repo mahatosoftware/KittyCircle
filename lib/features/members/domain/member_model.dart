@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 enum MemberRole { owner, admin, member }
 
@@ -9,6 +10,8 @@ class MemberModel {
   final String? photoUrl;
   final String? phoneNumber;
   final MemberRole role;
+  final DateTime? birthday;
+  final DateTime? anniversary;
   final DateTime joinedAt;
 
   MemberModel({
@@ -18,6 +21,8 @@ class MemberModel {
     this.photoUrl,
     this.phoneNumber,
     this.role = MemberRole.member,
+    this.birthday,
+    this.anniversary,
     DateTime? joinedAt,
   }) : joinedAt = joinedAt ?? DateTime.now();
 
@@ -31,6 +36,9 @@ class MemberModel {
         return 'Member';
     }
   }
+
+  String? get birthdayString => birthday != null ? DateFormat('dd MMMM').format(birthday!) : null;
+  String? get anniversaryString => anniversary != null ? DateFormat('dd MMMM').format(anniversary!) : null;
 
   static MemberRole parseRole(String? roleStr) {
     if (roleStr == 'Owner' || roleStr == 'owner') return MemberRole.owner;
@@ -46,6 +54,8 @@ class MemberModel {
       'photoUrl': photoUrl,
       'phoneNumber': phoneNumber,
       'role': roleString,
+      'birthday': birthday != null ? Timestamp.fromDate(birthday!) : null,
+      'anniversary': anniversary != null ? Timestamp.fromDate(anniversary!) : null,
       'joinedAt': Timestamp.fromDate(joinedAt),
     };
   }
@@ -58,7 +68,30 @@ class MemberModel {
       photoUrl: map['photoUrl'],
       phoneNumber: map['phoneNumber'],
       role: parseRole(map['role']),
+      birthday: (map['birthday'] as Timestamp?)?.toDate(),
+      anniversary: (map['anniversary'] as Timestamp?)?.toDate(),
       joinedAt: (map['joinedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  MemberModel copyWith({
+    String? displayName,
+    String? photoUrl,
+    String? phoneNumber,
+    MemberRole? role,
+    DateTime? birthday,
+    DateTime? anniversary,
+  }) {
+    return MemberModel(
+      userId: userId,
+      groupId: groupId,
+      displayName: displayName ?? this.displayName,
+      photoUrl: photoUrl ?? this.photoUrl,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      role: role ?? this.role,
+      birthday: birthday ?? this.birthday,
+      anniversary: anniversary ?? this.anniversary,
+      joinedAt: joinedAt,
     );
   }
 }

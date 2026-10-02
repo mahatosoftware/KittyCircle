@@ -15,7 +15,6 @@ import '../features/games/presentation/game_library_screen.dart';
 import '../features/games/presentation/live_game_host_screen.dart';
 import '../features/games/presentation/player_game_screen.dart';
 import '../features/games/presentation/winner_declaration_screen.dart';
-import '../features/memories/presentation/memories_gallery_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import 'main_navigation_shell.dart';
 
@@ -24,7 +23,7 @@ final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(d
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/home',
+  initialLocation: '/login',
   redirect: (context, state) {
     final isLoggedIn = AuthRepository().isUserAuthenticated;
     final isLoggingIn = state.matchedLocation == '/login';
@@ -59,10 +58,6 @@ final appRouter = GoRouter(
           builder: (context, state) => const GameLibraryScreen(),
         ),
         GoRoute(
-          path: '/memories',
-          builder: (context, state) => const MemoriesGalleryScreen(groupId: 'group_sunshine_1'),
-        ),
-        GoRoute(
           path: '/profile',
           builder: (context, state) => const ProfileScreen(),
         ),
@@ -77,7 +72,7 @@ final appRouter = GoRouter(
       path: '/group/:groupId',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = state.pathParameters['groupId'] ?? 'group_sunshine_1';
+        final id = state.pathParameters['groupId'] ?? '';
         return GroupDetailScreen(groupId: id);
       },
     ),
@@ -85,7 +80,7 @@ final appRouter = GoRouter(
       path: '/join/group/:groupId',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = state.pathParameters['groupId'] ?? 'group_sunshine_1';
+        final id = state.pathParameters['groupId'] ?? '';
         return GroupDetailScreen(groupId: id);
       },
     ),
@@ -98,7 +93,7 @@ final appRouter = GoRouter(
       path: '/event/:eventId',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = state.pathParameters['eventId'] ?? 'event_oct_18';
+        final id = state.pathParameters['eventId'] ?? '';
         return EventDetailScreen(eventId: id);
       },
     ),
@@ -106,7 +101,7 @@ final appRouter = GoRouter(
       path: '/create-next-kitty/:groupId',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = state.pathParameters['groupId'] ?? 'group_sunshine_1';
+        final id = state.pathParameters['groupId'] ?? '';
         return CreateNextKittyScreen(groupId: id);
       },
     ),
@@ -114,7 +109,7 @@ final appRouter = GoRouter(
       path: '/host-schedule/:groupId',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = state.pathParameters['groupId'] ?? 'group_sunshine_1';
+        final id = state.pathParameters['groupId'] ?? '';
         return HostScheduleScreen(groupId: id);
       },
     ),
@@ -122,7 +117,7 @@ final appRouter = GoRouter(
       path: '/live-game/:gameId',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = state.pathParameters['gameId'] ?? 'game_bolly_1';
+        final id = state.pathParameters['gameId'] ?? '';
         return LiveGameHostScreen(gameId: id);
       },
     ),
@@ -130,7 +125,7 @@ final appRouter = GoRouter(
       path: '/player-game/:gameId',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = state.pathParameters['gameId'] ?? 'game_bolly_1';
+        final id = state.pathParameters['gameId'] ?? '';
         return PlayerGameScreen(gameId: id);
       },
     ),
@@ -138,7 +133,7 @@ final appRouter = GoRouter(
       path: '/winners/:eventId',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        final id = state.pathParameters['eventId'] ?? 'event_oct_18';
+        final id = state.pathParameters['eventId'] ?? '';
         return WinnerDeclarationScreen(eventId: id);
       },
     ),

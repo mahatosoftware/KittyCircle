@@ -44,6 +44,8 @@ class ProfileRepository {
     String? photoUrl,
     String? city,
     String? language,
+    DateTime? birthday,
+    DateTime? anniversary,
   }) async {
     final existing = await getUserProfile(userId);
     if (existing != null) {
@@ -52,6 +54,8 @@ class ProfileRepository {
         photoUrl: photoUrl,
         city: city,
         language: language,
+        birthday: birthday,
+        anniversary: anniversary,
       );
       await saveUserProfile(updated);
     }

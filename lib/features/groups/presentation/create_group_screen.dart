@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../app/providers.dart';
+import '../../members/domain/member_model.dart';
 
 class CreateGroupScreen extends ConsumerStatefulWidget {
   const CreateGroupScreen({super.key});
@@ -35,8 +36,16 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
     setState(() => _isLoading = true);
 
+    final authUser = ref.read(authRepositoryProvider).currentFirebaseUser;
     final user = ref.read(currentUserProvider).value;
-    final ownerId = user?.uid ?? 'user_priya_1';
+    final ownerId = authUser?.uid ?? user?.uid ?? '';
+    if (ownerId.isEmpty) {
+      if (mounted) {
+        context.go('/login');
+      }
+      return;
+    }
+    final ownerName = authUser?.displayName ?? (user != null && user.displayName.isNotEmpty ? user.displayName : 'Kitty Host');
 
     final group = await ref.read(groupRepositoryProvider).createGroup(
           name: _nameController.text.trim(),
@@ -48,9 +57,18 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           ownerId: ownerId,
         );
 
+    // Synchronize creator as group owner in member repository
+    await ref.read(memberRepositoryProvider).addMember(
+          groupId: group.groupId,
+          userId: ownerId,
+          displayName: ownerName,
+          role: MemberRole.owner,
+        );
+
     setState(() => _isLoading = false);
 
     if (mounted) {
+      ref.invalidate(userGroupsProvider);
       ref.read(selectedGroupIdProvider.notifier).state = group.groupId;
       context.go('/group/${group.groupId}');
     }
@@ -62,7 +80,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
       appBar: AppBar(
         title: const Text('Create Kitty Group'),
       ),
-      body: SingleChildScrollView(
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: SingleChildScrollView(
         padding: EdgeInsets.only(
           left: 20,
           right: 20,
@@ -170,6 +192,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

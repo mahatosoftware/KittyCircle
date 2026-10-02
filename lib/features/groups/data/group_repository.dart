@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import '../domain/group_model.dart';
 import '../../../core/constants/app_constants.dart';
 
@@ -8,89 +10,83 @@ class GroupRepository {
 
   GroupRepository({this._firestore});
 
-  // In-memory initial store populated with realistic demo kitties
-  final Map<String, GroupModel> _groupStore = {
-    'group_sunshine_1': GroupModel(
-      groupId: 'group_sunshine_1',
-      name: '🌸 Sunshine Ladies',
-      description: 'Monthly kitty gathering for fun, games, food and chatter!',
-      contributionAmount: 2000,
-      currency: '₹',
-      frequency: 'Monthly',
-      defaultDurationHours: 3,
-      ownerId: 'user_priya_1',
-      memberIds: [
-        'user_priya_1',
-        'user_neha_2',
-        'user_kavita_3',
-        'user_ritu_4',
-        'user_anjali_5',
-        'user_simran_6',
-        'user_pooja_7',
-        'user_meena_8',
-        'user_sangeeta_9',
-        'user_deepa_10',
-        'user_rekha_11',
-        'user_sunita_12',
-        'user_anita_13',
-        'user_monica_14',
-      ],
-      adminIds: ['user_priya_1', 'user_neha_2'],
-    ),
-    'group_weekend_2': GroupModel(
-      groupId: 'group_weekend_2',
-      name: '💐 Weekend Queens',
-      description: 'Weekend high-tea & themes kitty party group!',
-      contributionAmount: 1500,
-      currency: '₹',
-      frequency: 'Monthly',
-      defaultDurationHours: 3,
-      ownerId: 'user_neha_2',
-      memberIds: [
-        'user_priya_1',
-        'user_neha_2',
-        'user_kavita_3',
-        'user_ritu_4',
-        'user_anjali_5',
-        'user_simran_6',
-        'user_pooja_7',
-        'user_meena_8',
-        'user_sangeeta_9',
-        'user_deepa_10',
-      ],
-      adminIds: ['user_neha_2'],
-    ),
-  };
+  // Dynamic store for active groups
+  final Map<String, GroupModel> _groupStore = {};
+  final StreamController<List<GroupModel>> _localStreamController =
+      StreamController<List<GroupModel>>.broadcast();
 
-  /// Fetch user's kitty groups
-  Stream<List<GroupModel>> watchUserGroups(String userId) async* {
-    yield _groupStore.values.where((g) => g.memberIds.contains(userId)).toList();
-
-    if (Firebase.apps.isEmpty && _firestore == null) return;
-
-    try {
-      final db = _firestore ?? FirebaseFirestore.instance;
-      final snapStream = db
-          .collection(AppConstants.groupsCollection)
-          .where('memberIds', arrayContains: userId)
-          .snapshots();
-
-      await for (final snap in snapStream) {
-        final groups = snap.docs.map((d) {
-          final model = GroupModel.fromMap(d.data(), d.id);
-          _groupStore[model.groupId] = model;
-          return model;
-        }).toList();
-        yield groups.isNotEmpty
-            ? groups
-            : _groupStore.values.where((g) => g.memberIds.contains(userId)).toList();
-      }
-    } catch (_) {
-      yield _groupStore.values.where((g) => g.memberIds.contains(userId)).toList();
+  void _notifyListeners() {
+    if (!_localStreamController.isClosed) {
+      _localStreamController.add(_groupStore.values.toList());
     }
   }
 
+  List<GroupModel> _getGroupsForUser(String userId) {
+    if (userId.isEmpty) {
+      return [];
+    }
+    return _groupStore.values
+        .where((g) => g.memberIds.contains(userId) || g.ownerId == userId)
+        .toList();
+  }
+
+  void clearCache() {
+    _groupStore.clear();
+    _notifyListeners();
+  }
+
+  /// Fetch user's kitty groups dynamically combining local store & Cloud Firestore
+  Stream<List<GroupModel>> watchUserGroups(String userId) {
+    late StreamController<List<GroupModel>> controller;
+    StreamSubscription? firestoreSub;
+    StreamSubscription? localSub;
+
+    controller = StreamController<List<GroupModel>>.broadcast(
+      onListen: () {
+        controller.add(_getGroupsForUser(userId));
+
+        localSub = _localStreamController.stream.listen((_) {
+          if (!controller.isClosed) {
+            controller.add(_getGroupsForUser(userId));
+          }
+        });
+
+        if (Firebase.apps.isNotEmpty || _firestore != null) {
+          try {
+            final db = _firestore ?? FirebaseFirestore.instance;
+            firestoreSub = db
+                .collection(AppConstants.groupsCollection)
+                .snapshots()
+                .listen((snap) {
+              final remoteGroupIds = snap.docs.map((d) => d.id).toSet();
+              _groupStore.removeWhere((id, _) => !remoteGroupIds.contains(id));
+              for (final d in snap.docs) {
+                final model = GroupModel.fromMap(d.data(), d.id);
+                _groupStore[model.groupId] = model;
+              }
+              _notifyListeners();
+            }, onError: (e) {
+              debugPrint('Error watching groups collection in Firestore: $e');
+              _notifyListeners();
+            });
+          } catch (e) {
+            debugPrint('Error setting up Firestore groups listener: $e');
+          }
+        }
+      },
+      onCancel: () {
+        localSub?.cancel();
+        firestoreSub?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
   Future<GroupModel?> getGroupById(String groupId) async {
+    if (_groupStore.containsKey(groupId)) {
+      return _groupStore[groupId];
+    }
     if (Firebase.apps.isNotEmpty || _firestore != null) {
       try {
         final db = _firestore ?? FirebaseFirestore.instance;
@@ -100,7 +96,9 @@ class GroupRepository {
           _groupStore[groupId] = model;
           return model;
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error getting group by id from Firestore: $e');
+      }
     }
     return _groupStore[groupId];
   }
@@ -129,6 +127,7 @@ class GroupRepository {
     );
 
     _groupStore[groupId] = newGroup;
+    _notifyListeners();
 
     if (Firebase.apps.isNotEmpty || _firestore != null) {
       try {
@@ -137,7 +136,10 @@ class GroupRepository {
             .collection(AppConstants.groupsCollection)
             .doc(groupId)
             .set(newGroup.toMap());
-      } catch (_) {}
+        debugPrint('Firestore: Group $groupId created successfully with attributes: ${newGroup.toMap()}');
+      } catch (e, stack) {
+        debugPrint('Firestore Error writing group to database: $e\n$stack');
+      }
     }
 
     return newGroup;
@@ -145,14 +147,19 @@ class GroupRepository {
 
   Future<void> updateGroup(GroupModel group) async {
     _groupStore[group.groupId] = group;
+    _notifyListeners();
+
     if (Firebase.apps.isNotEmpty || _firestore != null) {
       try {
         final db = _firestore ?? FirebaseFirestore.instance;
         await db
             .collection(AppConstants.groupsCollection)
             .doc(group.groupId)
-            .update(group.toMap());
-      } catch (_) {}
+            .set(group.toMap(), SetOptions(merge: true));
+        debugPrint('Firestore: Group ${group.groupId} updated successfully in database.');
+      } catch (e, stack) {
+        debugPrint('Firestore Error updating group in database: $e\n$stack');
+      }
     }
   }
 
@@ -191,11 +198,15 @@ class GroupRepository {
 
   Future<void> deleteGroup(String groupId) async {
     _groupStore.remove(groupId);
+    _notifyListeners();
+
     if (Firebase.apps.isNotEmpty || _firestore != null) {
       try {
         final db = _firestore ?? FirebaseFirestore.instance;
         await db.collection(AppConstants.groupsCollection).doc(groupId).delete();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error deleting group from Firestore: $e');
+      }
     }
   }
 }

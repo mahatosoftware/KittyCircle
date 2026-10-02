@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kitty_circle/features/groups/domain/group_model.dart';
+import 'package:kitty_circle/features/groups/data/group_repository.dart';
 import 'package:kitty_circle/features/members/domain/member_model.dart';
 
 void main() {
@@ -24,6 +25,7 @@ void main() {
       final map = group.toMap();
       expect(map['name'], equals('🌸 Sunshine Ladies'));
       expect(map['ownerId'], equals('user_priya_1'));
+      expect(map['createdBy'], equals('user_priya_1'));
     });
 
     test('MemberRole parsing', () {
@@ -31,6 +33,46 @@ void main() {
       expect(MemberModel.parseRole('Admin'), equals(MemberRole.admin));
       expect(MemberModel.parseRole('Member'), equals(MemberRole.member));
       expect(MemberModel.parseRole('unknown'), equals(MemberRole.member));
+    });
+
+    test('MemberModel birthday and anniversary handling', () {
+      final bday = DateTime(1992, 10, 15);
+      final anniv = DateTime(2018, 11, 24);
+      final member = MemberModel(
+        userId: 'user_100',
+        groupId: 'group_1',
+        displayName: 'Anjali Sharma',
+        role: MemberRole.admin,
+        birthday: bday,
+        anniversary: anniv,
+      );
+
+      expect(member.birthdayString, equals('15 October'));
+      expect(member.anniversaryString, equals('24 November'));
+      expect(member.roleString, equals('Admin'));
+
+      final map = member.toMap();
+      final restored = MemberModel.fromMap(map, 'user_100');
+      expect(restored.displayName, equals('Anjali Sharma'));
+      expect(restored.birthday?.year, equals(1992));
+      expect(restored.anniversary?.month, equals(11));
+    });
+
+    test('GroupRepository createGroup emits newly created groups on stream', () async {
+      final repo = GroupRepository();
+      final futureList = repo.watchUserGroups('user_test_owner').take(2).toList();
+
+      await repo.createGroup(
+        name: '🌸 Royal Queens',
+        description: 'Test Group',
+        contributionAmount: 5000,
+        ownerId: 'user_test_owner',
+      );
+
+      final results = await futureList;
+      expect(results.first, isEmpty);
+      expect(results.last.length, equals(1));
+      expect(results.last.first.name, equals('🌸 Royal Queens'));
     });
   });
 }

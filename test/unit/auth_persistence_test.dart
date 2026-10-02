@@ -3,9 +3,9 @@ import 'package:kitty_circle/features/auth/data/auth_repository.dart';
 
 void main() {
   group('AuthRepository session persistence tests', () {
-    test('Default session state is authenticated', () {
+    test('Unauthenticated session state is false', () {
       final authRepo = AuthRepository();
-      expect(authRepo.isUserAuthenticated, isTrue);
+      expect(authRepo.isUserAuthenticated, isFalse);
     });
 
     test('signOut sets isUserAuthenticated to false', () async {

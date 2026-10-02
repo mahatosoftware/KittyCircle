@@ -69,16 +69,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.only(
-            left: 24.0,
-            right: 24.0,
-            top: 24.0,
-            bottom: 24.0 + MediaQuery.paddingOf(context).bottom,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                left: 24.0,
+                right: 24.0,
+                top: 24.0,
+                bottom: 24.0 + MediaQuery.paddingOf(context).bottom,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               const SizedBox(height: 30),
               const Center(
                 child: AppLogo(size: 110),
@@ -107,8 +110,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const SizedBox(height: 40),
 
               // Mode Toggle (Phone / Email)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   ChoiceChip(
                     label: const Text('Phone Login'),
@@ -116,7 +121,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onSelected: (val) => setState(() => _isPhoneMode = true),
                     selectedColor: AppColors.primaryLight.withValues(alpha: 0.3),
                   ),
-                  const SizedBox(width: 12),
                   ChoiceChip(
                     label: const Text('Email / Password'),
                     selected: !_isPhoneMode,
@@ -149,7 +153,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   controller: _nameController,
                   decoration: const InputDecoration(
                     labelText: 'Full Name',
-                    hintText: 'Priya Sharma',
+                    hintText: 'Enter your name',
                     prefixIcon: Icon(Icons.person),
                   ),
                 ),
@@ -220,6 +224,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

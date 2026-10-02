@@ -43,7 +43,7 @@ class AuthRepository {
         if (authInstance.currentUser != null) return true;
       } catch (_) {}
     }
-    return !_hasSignedOut;
+    return _demoUser != null && !_hasSignedOut;
   }
 
   User? get currentFirebaseUser {
@@ -82,17 +82,10 @@ class AuthRepository {
       return newProfile;
     }
 
-    if (_demoUser != null) return _demoUser;
-    
-    _demoUser = UserModel(
-      uid: 'user_priya_1',
-      displayName: 'Priya Sharma',
-      phoneNumber: '+919876543210',
-      email: 'priya@kittycircle.app',
-      city: 'Bengaluru',
-      language: 'en',
-    );
-    return _demoUser;
+    if (!_hasSignedOut && _demoUser != null) {
+      return _demoUser;
+    }
+    return null;
   }
 
   Future<UserModel> signInWithEmail(String email, String password) async {

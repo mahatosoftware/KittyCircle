@@ -39,7 +39,7 @@ class HostScheduleModel {
 
   factory HostScheduleModel.fromMap(Map<String, dynamic> map, String id) {
     return HostScheduleModel(
-      scheduleId: id,
+      scheduleId: (map['scheduleId'] != null && (map['scheduleId'] as String).isNotEmpty) ? map['scheduleId'] as String : id,
       groupId: map['groupId'] ?? '',
       monthYear: map['monthYear'] ?? '',
       hostId: map['hostId'] ?? '',
@@ -85,7 +85,7 @@ class TimelineItemModel {
 
   factory TimelineItemModel.fromMap(Map<String, dynamic> map, String id) {
     return TimelineItemModel(
-      itemId: id,
+      itemId: (map['itemId'] != null && (map['itemId'] as String).isNotEmpty) ? map['itemId'] as String : id,
       eventId: map['eventId'] ?? '',
       timeString: map['timeString'] ?? '',
       title: map['title'] ?? '',
@@ -126,7 +126,7 @@ class FoodItemModel {
 
   factory FoodItemModel.fromMap(Map<String, dynamic> map, String id) {
     return FoodItemModel(
-      itemId: id,
+      itemId: (map['itemId'] != null && (map['itemId'] as String).isNotEmpty) ? map['itemId'] as String : id,
       eventId: map['eventId'] ?? '',
       category: map['category'] ?? 'Starters',
       itemName: map['itemName'] ?? '',

@@ -7,10 +7,10 @@ import '../../../core/services/deep_link_service.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../app/providers.dart';
+import '../domain/group_model.dart';
 import '../../members/presentation/members_screen.dart';
 import '../../contributions/presentation/contribution_screen.dart';
 import '../../expenses/presentation/expense_screen.dart';
-import '../../memories/presentation/memories_gallery_screen.dart';
 
 class GroupDetailScreen extends ConsumerStatefulWidget {
   final String groupId;
@@ -27,7 +27,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> with Sing
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -36,18 +36,101 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> with Sing
     super.dispose();
   }
 
+  void _showEditGroupDialog(BuildContext context, WidgetRef ref, GroupModel group) {
+    final nameCtrl = TextEditingController(text: group.name);
+    final descCtrl = TextEditingController(text: group.description);
+    final amountCtrl = TextEditingController(text: group.contributionAmount.toInt().toString());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Kitty Group'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Kitty Group Name *'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descCtrl,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Description'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: amountCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Monthly Contribution'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newName = nameCtrl.text.trim();
+              if (newName.isEmpty) return;
+              final newDesc = descCtrl.text.trim();
+              final newAmount = double.tryParse(amountCtrl.text.trim()) ?? group.contributionAmount;
+
+              final updatedGroup = group.copyWith(
+                name: newName,
+                description: newDesc,
+                contributionAmount: newAmount,
+              );
+
+              await ref.read(groupRepositoryProvider).updateGroup(updatedGroup);
+              ref.invalidate(currentGroupProvider);
+              ref.invalidate(userGroupsProvider);
+
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Kitty Group details updated successfully! 🎉')),
+                );
+              }
+            },
+            child: const Text('Save Changes'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final groupAsync = ref.watch(currentGroupProvider);
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.home_outlined, color: AppColors.primary),
+          tooltip: 'Go to Home',
+          onPressed: () => context.go('/home'),
+        ),
         title: groupAsync.when(
           data: (g) => Text(g?.name ?? 'Kitty Group'),
           loading: () => const Text('Loading...'),
           error: (_, _) => const Text('Kitty Group'),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+            tooltip: 'Edit Kitty Details',
+            onPressed: () {
+              final group = groupAsync.value;
+              if (group != null) {
+                _showEditGroupDialog(context, ref, group);
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.share, color: AppColors.primary),
             onPressed: () {
@@ -72,7 +155,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> with Sing
             Tab(text: 'Events'),
             Tab(text: 'Games'),
             Tab(text: 'Money'),
-            Tab(text: 'Memories'),
           ],
         ),
       ),
@@ -92,7 +174,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> with Sing
               _GroupEventsTab(groupId: group.groupId),
               _GroupGamesTab(groupId: group.groupId),
               _GroupMoneyTab(groupId: group.groupId),
-              MemoriesGalleryScreen(groupId: group.groupId),
             ],
           );
         },
@@ -109,46 +190,125 @@ class _GroupOverviewTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final membersAsync = ref.watch(groupMembersProvider(group.groupId));
+    final eventsAsync = ref.watch(groupEventsProvider(group.groupId));
+    final events = eventsAsync.value ?? [];
+    final nextEvent = events.where((e) => e.statusString == 'UPCOMING').firstOrNull ?? events.firstOrNull;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1000),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // NEXT KITTY BANNER
-        AppCard(
-          gradient: AppColors.primaryGradient,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.calendar_month, color: AppColors.gold, size: 20),
-                  SizedBox(width: 8),
-                  Text('NEXT KITTY', style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.2)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text('18 October 2026', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-              const SizedBox(height: 4),
-              const Text('Hosted by Priya Sharma at Indiranagar', style: TextStyle(color: Colors.white70, fontSize: 14)),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  ref.read(selectedEventIdProvider.notifier).state = 'event_oct_18';
-                  context.push('/event/event_oct_18');
-                },
-                icon: const Icon(Icons.visibility),
-                label: const Text('View Event Details'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppColors.primary,
+          AppCard(
+            gradient: AppColors.primaryGradient,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.calendar_month, color: AppColors.gold, size: 20),
+                    SizedBox(width: 8),
+                    Text('NEXT KITTY', style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.2)),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Text(
+                  nextEvent != null ? nextEvent.dateString : 'No Upcoming Kitty',
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  nextEvent != null ? 'Hosted by ${nextEvent.hostName} at ${nextEvent.venue}' : 'Schedule your next kitty gathering!',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (nextEvent != null) {
+                      ref.read(selectedEventIdProvider.notifier).state = nextEvent.eventId;
+                      context.push('/event/${nextEvent.eventId}');
+                    } else {
+                      context.push('/create-event');
+                    }
+                  },
+                  icon: Icon(nextEvent != null ? Icons.visibility : Icons.add),
+                  label: Text(nextEvent != null ? 'View Event Details' : 'Create Event'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 24),
+          const SizedBox(height: 20),
+
+          // UPCOMING CELEBRATIONS CARD
+          membersAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (err, stack) => const SizedBox.shrink(),
+            data: (members) {
+              final celebrationMembers = members.where((m) => m.birthdayString != null || m.anniversaryString != null).toList();
+              if (celebrationMembers.isEmpty) return const SizedBox.shrink();
+
+              return AppCard(
+                backgroundColor: AppColors.gold.withValues(alpha: 0.12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Text('🎉', style: TextStyle(fontSize: 18)),
+                        SizedBox(width: 8),
+                        Text(
+                          'MEMBER CELEBRATIONS',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.goldDark, letterSpacing: 1.1),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    ...celebrationMembers.map((m) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          children: [
+                            Text(m.displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            const Spacer(),
+                            if (m.birthdayString != null) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryLight.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text('🎂 ${m.birthdayString}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            if (m.anniversaryString != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.secondary.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text('💍 ${m.anniversaryString}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary)),
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
 
         // QUICK ACTIONS
         const Text('QUICK ACTIONS', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.2)),
@@ -247,7 +407,9 @@ class _GroupOverviewTab extends ConsumerWidget {
         ),
       ],
     ),
-  );
+  ),
+),
+);
 }
 }
 
@@ -330,13 +492,17 @@ class _GroupEventsTab extends ConsumerWidget {
   }
 }
 
-class _GroupGamesTab extends StatelessWidget {
+class _GroupGamesTab extends ConsumerWidget {
   final String groupId;
 
   const _GroupGamesTab({required this.groupId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eventsAsync = ref.watch(groupEventsProvider(groupId));
+    final activeEventId = eventsAsync.value?.firstOrNull?.eventId;
+    final winners = activeEventId != null ? (ref.watch(eventWinnersProvider(activeEventId)).value ?? []) : [];
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -349,45 +515,43 @@ class _GroupGamesTab extends StatelessWidget {
           const SizedBox(height: 20),
           const Text('GAMES PLAYED THIS SEASON', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.2)),
           const SizedBox(height: 12),
-          AppCard(
-            child: Column(
-              children: const [
-                ListTile(
-                  leading: Text('🎬', style: TextStyle(fontSize: 28)),
-                  title: Text('Bollywood Quiz'),
-                  subtitle: Text('Winner: Priya Sharma (90 pts)'),
-                  trailing: Text('18 Oct', style: TextStyle(color: AppColors.textMuted)),
+          if (winners.isEmpty)
+            const AppCard(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(
+                  child: Text('No games played yet this season. Launch a party game!', style: TextStyle(color: AppColors.textMuted)),
                 ),
-                Divider(),
-                ListTile(
-                  leading: Text('🧠', style: TextStyle(fontSize: 28)),
-                  title: Text('Memory Challenge'),
-                  subtitle: Text('Winner: Neha Gupta (80 pts)'),
-                  trailing: Text('18 Oct', style: TextStyle(color: AppColors.textMuted)),
-                ),
-                Divider(),
-                ListTile(
-                  leading: Text('🎁', style: TextStyle(fontSize: 28)),
-                  title: Text('Lucky Draw'),
-                  subtitle: Text('Winner: Kavita Verma'),
-                  trailing: Text('18 Oct', style: TextStyle(color: AppColors.textMuted)),
-                ),
-              ],
+              ),
+            )
+          else
+            AppCard(
+              child: Column(
+                children: winners.map((w) {
+                  return ListTile(
+                    leading: const Text('🏆', style: TextStyle(fontSize: 28)),
+                    title: Text(w.prizeTitle),
+                    subtitle: Text('Winner: ${w.winnerName} (${w.rank})'),
+                  );
+                }).toList(),
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _GroupMoneyTab extends StatelessWidget {
+class _GroupMoneyTab extends ConsumerWidget {
   final String groupId;
 
   const _GroupMoneyTab({required this.groupId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eventsAsync = ref.watch(groupEventsProvider(groupId));
+    final activeEventId = eventsAsync.value?.firstOrNull?.eventId ?? ref.watch(selectedEventIdProvider) ?? '';
+
     return DefaultTabController(
       length: 2,
       child: Column(
@@ -402,7 +566,7 @@ class _GroupMoneyTab extends StatelessWidget {
             child: TabBarView(
               children: [
                 ContributionScreen(groupId: groupId),
-                const ExpenseScreen(eventId: 'event_oct_18'),
+                ExpenseScreen(eventId: activeEventId),
               ],
             ),
           ),

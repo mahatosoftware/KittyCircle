@@ -2,6 +2,47 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ===============================================================
+    // Assumed Data Model & Access Control Architecture
+    // ===============================================================
+    //
+    // Collection: /users/{userId}
+    //   - Profile information for registered users
+    //
+    // Collection: /game_definitions/{gameId}
+    //   - Global read-only game catalog
+    //
+    // Top-Level Collections (direct root-level document access):
+    //   - /timeline/{itemId}
+    //   - /potluck/{itemId}
+    //   - /rsvps/{rsvpId}
+    //   - /attendance/{attendanceId}
+    //   - /hostSchedule/{scheduleId}
+    //   - /expenses/{expenseId}
+    //   - /winners/{winnerId}
+    //   - /prizes/{prizeId}
+    //   - /contributions/{contributionId}
+    //   - /memories/{memoryId}
+    //
+    // Collection: /groups/{groupId}
+    //   - Fields: ownerId, createdBy, memberIds (list), adminIds (list)
+    //   - Subcollections:
+    //     - /members/{memberId}
+    //     - /host_schedules/{scheduleId}
+    //     - /events/{eventId}
+    //       - /rsvps/{rsvpId}
+    //       - /attendance/{attendanceId}
+    //       - /food_items/{itemId}
+    //       - /timeline/{itemId}
+    //     - /game_sessions/{sessionId}
+    //       - /participants/{participantId}
+    //       - /winners/{winnerId}
+    //     - /contributions/{contributionId}
+    //     - /expenses/{expenseId}
+    //     - /memories/{memoryId}
+    //
+    // ===============================================================
+
     // Helper functions
     function isSignedIn() {
       return request.auth != null;
@@ -13,16 +54,20 @@ service cloud.firestore {
 
     function isMember(groupId) {
       return isSignedIn() && (
-        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)) ||
-        resource.data.createdBy == request.auth.uid
+        (resource != null && 'ownerId' in resource.data && resource.data.ownerId == request.auth.uid) ||
+        (resource != null && 'createdBy' in resource.data && resource.data.createdBy == request.auth.uid) ||
+        (resource != null && 'memberIds' in resource.data && resource.data.memberIds is list && request.auth.uid in resource.data.memberIds) ||
+        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid))
       );
     }
 
     function isAdmin(groupId) {
       return isSignedIn() && (
-        get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role == 'admin' ||
-        get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role == 'owner' ||
-        resource.data.createdBy == request.auth.uid
+        (resource != null && 'ownerId' in resource.data && resource.data.ownerId == request.auth.uid) ||
+        (resource != null && 'createdBy' in resource.data && resource.data.createdBy == request.auth.uid) ||
+        (resource != null && 'adminIds' in resource.data && resource.data.adminIds is list && request.auth.uid in resource.data.adminIds) ||
+        (exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role in ['admin', 'owner'])
       );
     }
 
@@ -40,10 +85,59 @@ service cloud.firestore {
       allow write: if false; // Only manageable by backend / admin
     }
 
+    // Top-level rules for direct collection queries
+    match /rsvps/{rsvpId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /attendance/{attendanceId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /timeline/{itemId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /potluck/{itemId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /hostSchedule/{scheduleId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /expenses/{expenseId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /winners/{winnerId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /prizes/{prizeId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /contributions/{contributionId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /memories/{memoryId} {
+      allow read, write: if isSignedIn();
+    }
+
     // Groups & Subcollections
     match /groups/{groupId} {
-      allow read: if isSignedIn() && (isMember(groupId) || resource.data.createdBy == request.auth.uid);
-      allow create: if isSignedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow read: if isSignedIn() && (
+        isMember(groupId) ||
+        ('ownerId' in resource.data && resource.data.ownerId == request.auth.uid) ||
+        ('createdBy' in resource.data && resource.data.createdBy == request.auth.uid) ||
+        ('memberIds' in resource.data && resource.data.memberIds != null && request.auth.uid in resource.data.memberIds)
+      );
+      allow create: if isSignedIn() && (
+        ('ownerId' in request.resource.data && request.resource.data.ownerId == request.auth.uid) ||
+        ('createdBy' in request.resource.data && request.resource.data.createdBy == request.auth.uid)
+      );
       allow update: if isSignedIn() && isMember(groupId);
       allow delete: if isSignedIn() && isAdmin(groupId);
 

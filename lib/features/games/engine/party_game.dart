@@ -35,20 +35,12 @@ class LuckyDrawGame implements PartyGame {
   String? selectedWinner;
   final List<String> winnerHistory = [];
 
-  static const List<String> defaultParticipants = [
-    'Priya Sharma',
-    'Neha Gupta',
-    'Kavita Verma',
-    'Ritu Kapoor',
-    'Ananya Roy',
-    'Meera Joshi',
-  ];
+  static const List<String> defaultParticipants = [];
 
   @override
   Future<void> initialize(GameSessionModel session) async {
     activeSession = session;
     _participants.clear();
-    _participants.addAll(defaultParticipants);
     selectedWinner = null;
   }
 

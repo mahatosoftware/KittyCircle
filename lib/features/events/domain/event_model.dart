@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 enum EventStatus { draft, invitationSent, upcoming, live, completed, cancelled }
 
@@ -43,6 +44,8 @@ class EventModel {
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
+
+  String get dateString => DateFormat('dd MMMM yyyy').format(date);
 
   String get statusString {
     switch (status) {

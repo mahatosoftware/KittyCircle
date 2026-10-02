@@ -5,6 +5,11 @@ import 'package:flutter/foundation.dart'
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 class DefaultFirebaseOptions {
+  static const String _apiKey = String.fromEnvironment(
+    'FIREBASE_API_KEY',
+    defaultValue: 'AIzaSyC-jZOcCrWLQRChh6wuMuuERW2oWi1rN4U',
+  );
+
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       return web;
@@ -34,7 +39,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyC-jZOcCrWLQRChh6wuMuuERW2oWi1rN4U',
+    apiKey: _apiKey,
     appId: '1:541062079623:android:daf08c29889d4b886f4422',
     messagingSenderId: '541062079623',
     projectId: 'kittycircle-firebase-prod',
@@ -42,7 +47,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyC-jZOcCrWLQRChh6wuMuuERW2oWi1rN4U',
+    apiKey: _apiKey,
     appId: '1:541062079623:web:daf08c29889d4b886f4422',
     messagingSenderId: '541062079623',
     projectId: 'kittycircle-firebase-prod',
@@ -50,7 +55,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyC-jZOcCrWLQRChh6wuMuuERW2oWi1rN4U',
+    apiKey: _apiKey,
     appId: '1:541062079623:ios:daf08c29889d4b886f4422',
     messagingSenderId: '541062079623',
     projectId: 'kittycircle-firebase-prod',
@@ -59,7 +64,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyC-jZOcCrWLQRChh6wuMuuERW2oWi1rN4U',
+    apiKey: _apiKey,
     appId: '1:541062079623:ios:daf08c29889d4b886f4422',
     messagingSenderId: '541062079623',
     projectId: 'kittycircle-firebase-prod',

@@ -6,17 +6,7 @@ import '../../../core/constants/app_constants.dart';
 class ContributionRepository {
   final FirebaseFirestore? _firestore;
 
-  final Map<String, List<ContributionModel>> _contributionStore = {
-    'group_sunshine_1': [
-      ContributionModel(contributionId: 'c1', groupId: 'group_sunshine_1', userId: 'user_priya_1', userName: 'Priya Sharma', monthYear: 'October 2026', amountExpected: 2000, amountPaid: 2000, status: ContributionStatus.paid),
-      ContributionModel(contributionId: 'c2', groupId: 'group_sunshine_1', userId: 'user_neha_2', userName: 'Neha Gupta', monthYear: 'October 2026', amountExpected: 2000, amountPaid: 2000, status: ContributionStatus.paid),
-      ContributionModel(contributionId: 'c3', groupId: 'group_sunshine_1', userId: 'user_kavita_3', userName: 'Kavita Verma', monthYear: 'October 2026', amountExpected: 2000, amountPaid: 0, status: ContributionStatus.pending),
-      ContributionModel(contributionId: 'c4', groupId: 'group_sunshine_1', userId: 'user_ritu_4', userName: 'Ritu Kapoor', monthYear: 'October 2026', amountExpected: 2000, amountPaid: 1000, status: ContributionStatus.partial),
-      ContributionModel(contributionId: 'c5', groupId: 'group_sunshine_1', userId: 'user_anjali_5', userName: 'Anjali Singh', monthYear: 'October 2026', amountExpected: 2000, amountPaid: 2000, status: ContributionStatus.paid),
-      ContributionModel(contributionId: 'c6', groupId: 'group_sunshine_1', userId: 'user_simran_6', userName: 'Simran Kaur', monthYear: 'October 2026', amountExpected: 2000, amountPaid: 2000, status: ContributionStatus.paid),
-      ContributionModel(contributionId: 'c7', groupId: 'group_sunshine_1', userId: 'user_pooja_7', userName: 'Pooja Reddy', monthYear: 'October 2026', amountExpected: 2000, amountPaid: 0, status: ContributionStatus.exempt),
-    ],
-  };
+  final Map<String, List<ContributionModel>> _contributionStore = {};
 
   ContributionRepository({this._firestore});
 
@@ -36,12 +26,8 @@ class ContributionRepository {
 
       await for (final snap in snapStream) {
         final list = snap.docs.map((d) => ContributionModel.fromMap(d.data(), d.id)).toList();
-        if (list.isNotEmpty) {
-          _contributionStore[groupId] = list;
-          yield list;
-        } else {
-          yield _contributionStore[groupId] ?? [];
-        }
+        _contributionStore[groupId] = list;
+        yield list;
       }
     } catch (_) {
       yield _contributionStore[groupId] ?? [];

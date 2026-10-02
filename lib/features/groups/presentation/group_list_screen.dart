@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../../app/providers.dart';
+import '../domain/group_model.dart';
 
 class GroupListScreen extends ConsumerWidget {
   const GroupListScreen({super.key});
@@ -22,108 +23,142 @@ class GroupListScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: groupsAsync.when(
-        loading: () => const LoadingState(),
-        error: (e, s) => ErrorState(message: e.toString()),
-        data: (groups) {
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(userGroupsProvider);
+        },
+        child: groupsAsync.when(
+          loading: () => const LoadingState(),
+          error: (e, s) => ErrorState(message: e.toString()),
+          data: (groups) {
           if (groups.isEmpty) {
-            return EmptyState(
+            return const EmptyState(
               title: 'No Kitty Groups',
-              description: 'Create your first kitty party group to get started!',
+              description: 'You have not joined any kitty party groups yet.',
               icon: Icons.groups_outlined,
-              actionText: 'Create Kitty',
-              onAction: () => context.push('/create-group'),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: groups.length,
-            itemBuilder: (context, index) {
-              final group = groups[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: AppCard(
-                  onTap: () {
-                    ref.read(selectedGroupIdProvider.notifier).state = group.groupId;
-                    context.push('/group/${group.groupId}');
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 28,
-                            backgroundColor: AppColors.primaryLight.withValues(alpha: 0.25),
-                            child: Text(
-                              group.name.substring(0, 2),
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  group.name,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  group.description,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _StatChip(
-                            icon: Icons.people_outline,
-                            label: '${group.memberIds.length} Members',
-                          ),
-                          _StatChip(
-                            icon: Icons.payments_outlined,
-                            label: '${group.currency}${group.contributionAmount.toInt()} ${group.frequency.toLowerCase()}',
-                          ),
-                          _StatChip(
-                            icon: Icons.event_outlined,
-                            label: 'Next: 18 Oct',
-                          ),
-                        ],
-                      ),
-                    ],
+          final width = MediaQuery.sizeOf(context).width;
+          final isTablet = width >= 600;
+
+          final Widget listWidget = isTablet
+              ? GridView.builder(
+                  padding: const EdgeInsets.all(20),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 480,
+                    mainAxisExtent: 160,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
                   ),
-                ),
-              );
-            },
+                  itemCount: groups.length,
+                  itemBuilder: (context, index) {
+                    final group = groups[index];
+                    return _buildGroupCard(context, ref, group);
+                  },
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: groups.length,
+                  itemBuilder: (context, index) {
+                    final group = groups[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _buildGroupCard(context, ref, group),
+                    );
+                  },
+                );
+
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1000),
+              child: listWidget,
+            ),
           );
         },
       ),
+    ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/create-group'),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('New Kitty', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildGroupCard(BuildContext context, WidgetRef ref, GroupModel group) {
+    return AppCard(
+      onTap: () {
+        ref.read(selectedGroupIdProvider.notifier).state = group.groupId;
+        context.push('/group/${group.groupId}');
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.25),
+                child: Text(
+                  group.name.isNotEmpty ? group.name.substring(0, 1) : '🌸',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      group.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      group.description,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _StatChip(
+                icon: Icons.people_outline,
+                label: '${group.memberIds.length} Members',
+              ),
+              _StatChip(
+                icon: Icons.payments_outlined,
+                label: '${group.currency}${group.contributionAmount.toInt()} ${group.frequency.toLowerCase()}',
+              ),
+              const _StatChip(
+                icon: Icons.event_outlined,
+                label: 'Active Kitty',
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
