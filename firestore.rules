@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isMember(groupId) {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)) ||
+        resource.data.createdBy == request.auth.uid
+      );
+    }
+
+    function isAdmin(groupId) {
+      return isSignedIn() && (
+        get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role == 'admin' ||
+        get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role == 'owner' ||
+        resource.data.createdBy == request.auth.uid
+      );
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isUser(userId);
+      allow update: if isUser(userId);
+      allow delete: if isUser(userId);
+    }
+
+    // Game Catalog (Global definitions)
+    match /game_definitions/{gameId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only manageable by backend / admin
+    }
+
+    // Groups & Subcollections
+    match /groups/{groupId} {
+      allow read: if isSignedIn() && (isMember(groupId) || resource.data.createdBy == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isSignedIn() && isMember(groupId);
+      allow delete: if isSignedIn() && isAdmin(groupId);
+
+      // Members
+      match /members/{memberId} {
+        allow read: if isSignedIn() && isMember(groupId);
+        allow create, update: if isSignedIn() && (isMember(groupId) || request.auth.uid == memberId);
+        allow delete: if isSignedIn() && (isAdmin(groupId) || request.auth.uid == memberId);
+      }
+
+      // Host Schedules
+      match /host_schedules/{scheduleId} {
+        allow read, write: if isSignedIn() && isMember(groupId);
+      }
+
+      // Events & Subcollections
+      match /events/{eventId} {
+        allow read, write: if isSignedIn() && isMember(groupId);
+
+        match /rsvps/{rsvpId} {
+          allow read, write: if isSignedIn() && isMember(groupId);
+        }
+
+        match /attendance/{attendanceId} {
+          allow read, write: if isSignedIn() && isMember(groupId);
+        }
+
+        match /food_items/{itemId} {
+          allow read, write: if isSignedIn() && isMember(groupId);
+        }
+
+        match /timeline/{itemId} {
+          allow read, write: if isSignedIn() && isMember(groupId);
+        }
+      }
+
+      // Game Sessions & Subcollections
+      match /game_sessions/{sessionId} {
+        allow read, write: if isSignedIn() && isMember(groupId);
+
+        match /participants/{participantId} {
+          allow read, write: if isSignedIn() && isMember(groupId);
+        }
+
+        match /winners/{winnerId} {
+          allow read, write: if isSignedIn() && isMember(groupId);
+        }
+      }
+
+      // Contributions
+      match /contributions/{contributionId} {
+        allow read, write: if isSignedIn() && isMember(groupId);
+      }
+
+      // Expenses & Budgets
+      match /expenses/{expenseId} {
+        allow read, write: if isSignedIn() && isMember(groupId);
+      }
+
+      // Memories
+      match /memories/{memoryId} {
+        allow read, write: if isSignedIn() && isMember(groupId);
+      }
+    }
+  }
+}

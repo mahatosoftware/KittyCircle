@@ -1,0 +1,38 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*') &&
+             request.resource.size < 10 * 1024 * 1024; // 10MB limit
+    }
+
+    // User Profile Avatars
+    match /users/{userId}/avatar/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId && isImage();
+    }
+
+    // Group Photos & Covers
+    match /groups/{groupId}/cover/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isImage();
+    }
+
+    // Event Memories & Photos
+    match /groups/{groupId}/events/{eventId}/memories/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isImage();
+    }
+
+    // Receipts & Expense Attachments
+    match /groups/{groupId}/expenses/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isImage();
+    }
+  }
+}
