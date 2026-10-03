@@ -4,6 +4,8 @@ import '../features/auth/domain/user_model.dart';
 import '../features/profile/data/profile_repository.dart';
 import '../features/groups/data/group_repository.dart';
 import '../features/groups/domain/group_model.dart';
+import '../features/groups/domain/join_request_model.dart';
+import '../features/groups/domain/group_invite_model.dart';
 import '../features/members/data/member_repository.dart';
 import '../features/members/domain/member_model.dart';
 import '../features/events/data/event_repository.dart';
@@ -15,6 +17,8 @@ import '../features/games/data/game_repository.dart';
 import '../features/games/domain/game_models.dart';
 import '../features/contributions/data/contribution_repository.dart';
 import '../features/contributions/domain/contribution_model.dart';
+import '../features/contributions/data/ledger_repository.dart';
+import '../features/contributions/domain/kitty_transaction_model.dart';
 import '../features/expenses/data/expense_repository.dart';
 import '../features/expenses/domain/expense_model.dart';
 import '../features/memories/data/memory_repository.dart';
@@ -28,6 +32,7 @@ final memberRepositoryProvider = Provider<MemberRepository>((ref) => MemberRepos
 final eventRepositoryProvider = Provider<EventRepository>((ref) => EventRepository());
 final gameRepositoryProvider = Provider<GameRepository>((ref) => GameRepository());
 final contributionRepositoryProvider = Provider<ContributionRepository>((ref) => ContributionRepository());
+final ledgerRepositoryProvider = Provider<LedgerRepository>((ref) => LedgerRepository());
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) => ExpenseRepository());
 final memoryRepositoryProvider = Provider<MemoryRepository>((ref) => MemoryRepository());
 
@@ -150,8 +155,38 @@ final eventFoodPlannerProvider = StreamProvider.family<List<FoodItemModel>, Stri
 });
 
 // Watch Contributions
-final groupContributionsProvider = StreamProvider.family<List<ContributionModel>, String>((ref, groupId) {
-  return ref.watch(contributionRepositoryProvider).watchGroupContributions(groupId, 'October 2026');
+final groupContributionsProvider = StreamProvider.family<List<ContributionModel>, String>((ref, groupId) async* {
+  final members = ref.watch(groupMembersProvider(groupId)).value ?? [];
+  final contribRepo = ref.watch(contributionRepositoryProvider);
+
+  await for (final storeList in contribRepo.watchGroupContributions(groupId, 'October 2026')) {
+    if (members.isEmpty) {
+      yield storeList;
+      continue;
+    }
+
+    final Map<String, ContributionModel> existingMap = {
+      for (var c in storeList) c.userId: c
+    };
+
+    final List<ContributionModel> merged = members.map((m) {
+      if (existingMap.containsKey(m.userId)) {
+        return existingMap[m.userId]!;
+      }
+      return ContributionModel(
+        contributionId: 'contrib_${groupId}_${m.userId}',
+        groupId: groupId,
+        userId: m.userId,
+        userName: m.displayName,
+        monthYear: 'October 2026',
+        amountExpected: 2000.0,
+        amountPaid: 0.0,
+        status: ContributionStatus.pending,
+      );
+    }).toList();
+
+    yield merged;
+  }
 });
 
 // Watch Event Expenses
@@ -178,3 +213,30 @@ final eventWinnersProvider = StreamProvider.family<List<WinnerModel>, String>((r
 final eventPrizesProvider = StreamProvider.family<List<PrizeModel>, String>((ref, eventId) {
   return ref.watch(gameRepositoryProvider).watchEventPrizes(eventId);
 });
+
+// Watch Group Pending Join Requests
+final groupJoinRequestsProvider = StreamProvider.family<List<JoinRequestModel>, String>((ref, groupId) {
+  return ref.watch(groupRepositoryProvider).watchGroupJoinRequests(groupId);
+});
+
+// Watch Group One-Time Invitations
+final groupInvitesProvider = StreamProvider.family<List<GroupInviteModel>, String>((ref, groupId) {
+  return ref.watch(groupRepositoryProvider).watchGroupInvites(groupId);
+});
+
+// Watch Event Ledger Transactions
+final eventTransactionsProvider = StreamProvider.family<List<KittyTransactionModel>, ({String groupId, String eventId})>((ref, args) {
+  return ref.watch(ledgerRepositoryProvider).watchEventTransactions(args.groupId, args.eventId);
+});
+
+// Watch Group Circle-Level Ledger Transactions
+final groupTransactionsProvider = StreamProvider.family<List<KittyTransactionModel>, String>((ref, groupId) {
+  return ref.watch(ledgerRepositoryProvider).watchGroupTransactions(groupId);
+});
+
+// Watch Member Financial Transactions
+final memberTransactionsProvider = StreamProvider.family<List<KittyTransactionModel>, ({String groupId, String userId})>((ref, args) {
+  return ref.watch(ledgerRepositoryProvider).watchMemberTransactions(args.groupId, args.userId);
+});
+
+

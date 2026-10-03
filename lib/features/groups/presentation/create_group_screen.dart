@@ -20,6 +20,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   final _amountController = TextEditingController(text: '2000');
   String _selectedFrequency = 'Monthly';
   String _selectedCurrency = '₹';
+  String _joiningPolicy = 'approval';
   int _durationHours = 3;
   bool _isLoading = false;
 
@@ -55,6 +56,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           frequency: _selectedFrequency,
           defaultDurationHours: _durationHours,
           ownerId: ownerId,
+          joiningPolicy: _joiningPolicy,
+          approvalRequired: _joiningPolicy == 'approval',
         );
 
     // Synchronize creator as group owner in member repository
@@ -70,7 +73,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     if (mounted) {
       ref.invalidate(userGroupsProvider);
       ref.read(selectedGroupIdProvider.notifier).state = group.groupId;
-      context.go('/group/${group.groupId}');
+      context.go('/host-selection/${group.groupId}');
     }
   }
 
@@ -181,6 +184,55 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     onPressed: () => setState(() => _durationHours++),
                   ),
                 ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Group Joining Settings',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      value: 'approval',
+                      groupValue: _joiningPolicy,
+                      title: const Text('Host approval required (Recommended)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Members must request to join, host approves', style: TextStyle(fontSize: 12)),
+                      activeColor: AppColors.primary,
+                      onChanged: (val) {
+                        if (val != null) setState(() => _joiningPolicy = val);
+                      },
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<String>(
+                      value: 'anyone',
+                      groupValue: _joiningPolicy,
+                      title: const Text('Anyone with invite code', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Instant join with 6-char code or QR code', style: TextStyle(fontSize: 12)),
+                      activeColor: AppColors.primary,
+                      onChanged: (val) {
+                        if (val != null) setState(() => _joiningPolicy = val);
+                      },
+                    ),
+                    const Divider(height: 1),
+                    RadioListTile<String>(
+                      value: 'invite_only',
+                      groupValue: _joiningPolicy,
+                      title: const Text('Invite only', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Only host can add members directly', style: TextStyle(fontSize: 12)),
+                      activeColor: AppColors.primary,
+                      onChanged: (val) {
+                        if (val != null) setState(() => _joiningPolicy = val);
+                      },
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 32),
               PrimaryButton(

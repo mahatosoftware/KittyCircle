@@ -6,10 +6,13 @@ import '../features/home/presentation/home_screen.dart';
 import '../features/groups/presentation/group_list_screen.dart';
 import '../features/groups/presentation/create_group_screen.dart';
 import '../features/groups/presentation/group_detail_screen.dart';
+import '../features/groups/presentation/group_invitations_screen.dart';
+import '../features/groups/presentation/join_group_screen.dart';
 import '../features/events/presentation/create_event_screen.dart';
 import '../features/events/presentation/event_detail_screen.dart';
 import '../features/events/presentation/create_next_kitty_screen.dart';
 import '../features/events/presentation/host_schedule_screen.dart';
+import '../features/events/presentation/host_selection_screen.dart';
 import '../features/events/presentation/theme_library_screen.dart';
 import '../features/games/presentation/game_library_screen.dart';
 import '../features/games/presentation/live_game_host_screen.dart';
@@ -69,11 +72,35 @@ final appRouter = GoRouter(
       builder: (context, state) => const CreateGroupScreen(),
     ),
     GoRoute(
+      path: '/join-group',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final code = state.uri.queryParameters['code'];
+        return JoinGroupScreen(initialCode: code);
+      },
+    ),
+    GoRoute(
+      path: '/join',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final code = state.uri.queryParameters['code'];
+        return JoinGroupScreen(initialCode: code);
+      },
+    ),
+    GoRoute(
       path: '/group/:groupId',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final id = state.pathParameters['groupId'] ?? '';
         return GroupDetailScreen(groupId: id);
+      },
+    ),
+    GoRoute(
+      path: '/group/:groupId/invitations',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final id = state.pathParameters['groupId'] ?? '';
+        return GroupInvitationsScreen(groupId: id);
       },
     ),
     GoRoute(
@@ -85,9 +112,20 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
+      path: '/host-selection/:groupId',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        final id = state.pathParameters['groupId'] ?? '';
+        return HostSelectionScreen(groupId: id);
+      },
+    ),
+    GoRoute(
       path: '/create-event',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const CreateEventScreen(),
+      builder: (context, state) {
+        final groupId = state.uri.queryParameters['groupId'];
+        return CreateEventScreen(initialGroupId: groupId);
+      },
     ),
     GoRoute(
       path: '/event/:eventId',

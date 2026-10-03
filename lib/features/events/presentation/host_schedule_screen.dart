@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/whatsapp_service.dart';
@@ -20,16 +21,51 @@ class HostScheduleScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Host Rotation Schedule'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.how_to_reg_outlined, color: AppColors.primary),
+            tooltip: 'Configure Host Selection',
+            onPressed: () => context.push('/host-selection/$groupId'),
+          ),
+        ],
       ),
       body: scheduleAsync.when(
         loading: () => const LoadingState(),
         error: (e, s) => ErrorState(message: e.toString()),
         data: (schedule) {
           if (schedule.isEmpty) {
-            return const EmptyState(
-              title: 'No Schedule Generated',
-              description: 'Automatic host schedule will appear here.',
-              icon: Icons.calendar_month,
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('🎉', style: TextStyle(fontSize: 48)),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No Host Schedule Yet',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Set up host selection options: Pick randomly, Volunteer, or Rotation.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/host-selection/$groupId'),
+                      icon: const Text('🎉', style: TextStyle(fontSize: 16)),
+                      label: const Text('Set Up Host Selection'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             );
           }
 

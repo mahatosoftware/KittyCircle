@@ -18,6 +18,12 @@ class GroupListScreen extends ConsumerWidget {
         title: const Text('My Kitty Groups'),
         actions: [
           IconButton(
+            tooltip: 'Join Kitty',
+            icon: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
+            onPressed: () => context.push('/join-group'),
+          ),
+          IconButton(
+            tooltip: 'Create Group',
             icon: const Icon(Icons.add, color: AppColors.primary),
             onPressed: () => context.push('/create-group'),
           ),
@@ -32,10 +38,15 @@ class GroupListScreen extends ConsumerWidget {
           error: (e, s) => ErrorState(message: e.toString()),
           data: (groups) {
           if (groups.isEmpty) {
-            return const EmptyState(
-              title: 'No Kitty Groups',
-              description: 'You have not joined any kitty party groups yet.',
-              icon: Icons.groups_outlined,
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: EmptyState(
+                  title: 'No Kitty Groups',
+                  description: 'You have not joined any kitty party groups yet.',
+                  icon: Icons.groups_outlined,
+                ),
+              ),
             );
           }
 
@@ -79,11 +90,26 @@ class GroupListScreen extends ConsumerWidget {
         },
       ),
     ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/create-group'),
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('New Kitty', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'join_group_fab',
+            onPressed: () => context.push('/join-group'),
+            backgroundColor: Colors.white,
+            foregroundColor: AppColors.primary,
+            icon: const Icon(Icons.group_add_outlined),
+            label: const Text('Join Kitty', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 12),
+          FloatingActionButton.extended(
+            heroTag: 'create_group_fab',
+            onPressed: () => context.push('/create-group'),
+            backgroundColor: AppColors.primary,
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: const Text('New Kitty', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

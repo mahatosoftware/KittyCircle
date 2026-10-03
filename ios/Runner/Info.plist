@@ -70,5 +70,7 @@
 	<string>Kitty Circle needs camera access so you can capture and share party photos & memories.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Kitty Circle needs photo library access so you can select profile avatars and party photos.</string>
+	<key>GADApplicationID</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
 </dict>
 </plist>

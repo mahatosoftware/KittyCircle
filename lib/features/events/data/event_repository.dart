@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import '../domain/event_model.dart';
 import '../domain/rsvp_model.dart';
 import '../domain/attendance_model.dart';
@@ -165,6 +166,103 @@ class EventRepository {
         debugPrint('Error updating event status in Firestore: $e');
       }
     }
+  }
+
+  Future<void> updateEvent(EventModel event) async {
+    final list = _eventStore[event.groupId];
+    if (list != null) {
+      final idx = list.indexWhere((e) => e.eventId == event.eventId);
+      if (idx != -1) {
+        list[idx] = event;
+        _notifyListeners();
+      }
+    }
+
+    if (Firebase.apps.isNotEmpty || _firestore != null) {
+      try {
+        final db = _firestore ?? FirebaseFirestore.instance;
+        await db
+            .collection(AppConstants.groupsCollection)
+            .doc(event.groupId)
+            .collection(AppConstants.eventsCollection)
+            .doc(event.eventId)
+            .set(event.toMap(), SetOptions(merge: true));
+      } catch (e) {
+        debugPrint('Error updating event in Firestore: $e');
+      }
+    }
+  }
+
+  Future<List<EventModel>> generateEventsForGroup({
+    required dynamic group,
+    required List<dynamic> members,
+    required List<EventModel> existingEvents,
+    required String currentUserId,
+  }) async {
+    if (members.isEmpty) return [];
+
+    final sortedEvents = List<EventModel>.from(existingEvents)..sort((a, b) => a.date.compareTo(b.date));
+    final Set<String> existingHostIds = sortedEvents.map((e) => e.hostId).where((id) => id.isNotEmpty).toSet();
+
+    final unassignedMembers = members.where((m) {
+      final uid = m is String ? m : (m.userId ?? '');
+      return uid.isNotEmpty && !existingHostIds.contains(uid);
+    }).toList();
+
+    if (unassignedMembers.isEmpty) return [];
+
+    DateTime baseDate = sortedEvents.isNotEmpty ? sortedEvents.last.date : DateTime.now();
+
+    final List<EventModel> createdEvents = [];
+
+    for (int i = 0; i < unassignedMembers.length; i++) {
+      final m = unassignedMembers[i];
+      final uId = m is String ? m : m.userId;
+      final uName = m is String ? 'Member' : m.displayName;
+
+      final freq = (group.frequency as String? ?? 'Monthly').toLowerCase();
+      DateTime nextDate;
+      if (freq.contains('2 week') || freq.contains('fortnight') || freq.contains('biweekly')) {
+        nextDate = baseDate.add(Duration(days: 14 * (i + 1)));
+      } else if (freq.contains('week')) {
+        nextDate = baseDate.add(Duration(days: 7 * (i + 1)));
+      } else {
+        final targetMonth = baseDate.month + (i + 1);
+        final targetYear = baseDate.year + (targetMonth - 1) ~/ 12;
+        final actualMonth = (targetMonth - 1) % 12 + 1;
+        nextDate = DateTime(targetYear, actualMonth, 18, 16, 0);
+        if (nextDate.isBefore(DateTime.now())) {
+          nextDate = DateTime.now().add(Duration(days: 30 * (i + 1)));
+        }
+      }
+
+      final monthYearStr = DateFormat('MMMM yyyy').format(nextDate);
+      final eventId = 'event_${group.groupId}_${uId}_${DateTime.now().millisecondsSinceEpoch}_$i';
+
+      final event = EventModel(
+        eventId: eventId,
+        groupId: group.groupId,
+        title: '${group.name} Kitty - $monthYearStr',
+        date: nextDate,
+        startTime: '4:00 PM',
+        endTime: '7:00 PM',
+        hostId: uId,
+        hostName: uName,
+        venue: "$uName's Residence",
+        venueAddress: 'Host Residence',
+        theme: 'Bollywood',
+        dressCode: 'Festive / Party Wear',
+        foodNotes: 'Snacks, Starters & Mocktails',
+        description: 'Kitty Circle event hosted by $uName',
+        createdBy: currentUserId,
+        status: EventStatus.upcoming,
+      );
+
+      await createEvent(event);
+      createdEvents.add(event);
+    }
+
+    return createdEvents;
   }
 
   String? _findGroupIdForEvent(String eventId) {

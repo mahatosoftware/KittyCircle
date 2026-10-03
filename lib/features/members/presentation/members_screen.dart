@@ -5,8 +5,10 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/services/whatsapp_service.dart';
 import '../../../core/services/deep_link_service.dart';
 import '../../../core/widgets/common_widgets.dart';
+import '../../../core/widgets/native_ad_card.dart';
 import '../../../app/providers.dart';
 import '../domain/member_model.dart';
+import 'widgets/member_financial_profile_modal.dart';
 
 class MembersScreen extends ConsumerStatefulWidget {
   final String groupId;
@@ -350,7 +352,20 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                       )
                     : null,
               ),
-              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  MemberFinancialProfileModal.show(context, member: member);
+                },
+                icon: const Icon(Icons.account_balance_wallet),
+                label: const Text('Financial Summary & Ledger 📊'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -459,81 +474,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  ...members.map((m) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: ListTile(
-                        onTap: () => _showMemberDetailModal(context, m),
-                        leading: MemberAvatar(name: m.displayName, role: m.roleString),
-                        title: Row(
-                          children: [
-                            Text(m.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(width: 6),
-                            Text(_roleEmoji(m.role), style: const TextStyle(fontSize: 14)),
-                          ],
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(m.phoneNumber ?? 'Active Member'),
-                            if (m.birthdayString != null || m.anniversaryString != null) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  if (m.birthdayString != null) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primaryLight.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        '🎂 ${m.birthdayString}',
-                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                  ],
-                                  if (m.anniversaryString != null) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.secondary.withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        '💍 ${m.anniversaryString}',
-                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: m.role == MemberRole.owner
-                                ? AppColors.gold.withValues(alpha: 0.25)
-                                : (m.role == MemberRole.admin ? AppColors.secondary.withValues(alpha: 0.15) : Colors.grey.shade200),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            m.roleString,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: m.role == MemberRole.owner
-                                  ? AppColors.goldDark
-                                  : (m.role == MemberRole.admin ? AppColors.secondary : AppColors.textSecondary),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
+                  ..._buildMemberListWithAds(members, context),
                 ],
               ),
             ),
@@ -541,5 +482,93 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
         },
       ),
     );
+  }
+
+  List<Widget> _buildMemberListWithAds(List<MemberModel> members, BuildContext context) {
+    final List<Widget> widgets = [];
+    for (int i = 0; i < members.length; i++) {
+      final m = members[i];
+      widgets.add(
+        Card(
+          margin: const EdgeInsets.only(bottom: 10),
+          child: ListTile(
+            onTap: () => _showMemberDetailModal(context, m),
+            leading: MemberAvatar(name: m.displayName, role: m.roleString),
+            title: Row(
+              children: [
+                Text(m.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 6),
+                Text(_roleEmoji(m.role), style: const TextStyle(fontSize: 14)),
+              ],
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(m.phoneNumber ?? 'Active Member'),
+                if (m.birthdayString != null || m.anniversaryString != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (m.birthdayString != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '🎂 ${m.birthdayString}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      if (m.anniversaryString != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.secondary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '💍 ${m.anniversaryString}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ],
+            ),
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: m.role == MemberRole.owner
+                    ? AppColors.gold.withValues(alpha: 0.25)
+                    : (m.role == MemberRole.admin ? AppColors.secondary.withValues(alpha: 0.15) : Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                m.roleString,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: m.role == MemberRole.owner
+                      ? AppColors.goldDark
+                      : (m.role == MemberRole.admin ? AppColors.secondary : AppColors.textSecondary),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Insert 1 native ad card after every 5 members
+      if ((i + 1) % 5 == 0) {
+        widgets.add(const NativeAdCard());
+      }
+    }
+    return widgets;
   }
 }

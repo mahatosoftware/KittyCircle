@@ -90,6 +90,39 @@ _KittyCircle_
     await _shareText(message);
   }
 
+  /// Share Expense Settlement Breakdown
+  static Future<void> shareExpenseSettlement({
+    required String eventTitle,
+    required String groupName,
+    required double totalExpenses,
+    required double perPersonShare,
+    required List<Map<String, dynamic>> memberBalances,
+  }) async {
+    final buffer = StringBuffer();
+    buffer.writeln("🧾 *Expense Split & Settlement Summary*");
+    buffer.writeln("🎉 *$eventTitle* ($groupName)\n");
+    buffer.writeln("💵 *Total Expenses:* ₹${totalExpenses.toInt()}");
+    buffer.writeln("👥 *Equal Share:* ₹${perPersonShare.toInt()} per member\n");
+    buffer.writeln("*Member Balances:*");
+    for (final m in memberBalances) {
+      final double bal = (m['balance'] as num).toDouble();
+      final String name = m['name'] as String;
+      final bool isSettled = m['isSettled'] as bool? ?? false;
+      if (isSettled) {
+        buffer.writeln("✅ *$name*: Settled (Paid ₹${(m['paid'] as num).toInt()})");
+      } else if (bal > 0) {
+        buffer.writeln("🟢 *$name*: Receives ₹${bal.toInt()} (Paid ₹${(m['paid'] as num).toInt()})");
+      } else if (bal < 0) {
+        buffer.writeln("🔴 *$name*: Owes ₹${(-bal).toInt()} (Paid ₹${(m['paid'] as num).toInt()})");
+      } else {
+        buffer.writeln("✅ *$name*: Settled (₹0 net balance)");
+      }
+    }
+    buffer.writeln("\n_Please complete your UPI payments to settle balances!_ 💸");
+    buffer.writeln("_Shared via KittyCircle_");
+    await _shareText(buffer.toString());
+  }
+
   static Future<void> _shareText(String text) async {
     // Primary: Native Share dialog (user can pick WhatsApp, Messages, etc.)
     final result = await Share.share(text);

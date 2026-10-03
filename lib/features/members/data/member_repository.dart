@@ -25,6 +25,54 @@ class MemberRepository {
 
       await for (final snap in stream) {
         final members = snap.docs.map((d) => MemberModel.fromMap(d.data(), d.id)).toList();
+
+        // Auto-sync any members present in group.memberIds but missing in members subcollection
+        try {
+          final groupDoc = await db.collection(AppConstants.groupsCollection).doc(groupId).get();
+          if (groupDoc.exists && groupDoc.data() != null) {
+            final data = groupDoc.data()!;
+            final memberIds = (data['memberIds'] as List?)?.map((e) => e.toString()).toList() ?? [];
+            final existingUserIds = members.map((m) => m.userId).toSet();
+
+            for (final uid in memberIds) {
+              if (!existingUserIds.contains(uid)) {
+                final isOwner = data['ownerId'] == uid;
+                String resolvedName = '';
+                if (data['createdBy'] == uid && (data['createdByName'] as String?)?.isNotEmpty == true) {
+                  resolvedName = data['createdByName'];
+                }
+                if (resolvedName.isEmpty) {
+                  try {
+                    final uSnap = await db.collection(AppConstants.usersCollection).doc(uid).get();
+                    if (uSnap.exists && uSnap.data() != null) {
+                      final uData = uSnap.data()!;
+                      resolvedName = uData['displayName'] ?? uData['userName'] ?? uData['name'] ?? uData['email']?.split('@').first ?? '';
+                    }
+                  } catch (_) {}
+                }
+                if (resolvedName.isEmpty) {
+                  resolvedName = 'Kitty Member';
+                }
+
+                final synth = MemberModel(
+                  userId: uid,
+                  groupId: groupId,
+                  displayName: resolvedName,
+                  role: isOwner ? MemberRole.owner : MemberRole.member,
+                );
+                members.add(synth);
+
+                // Auto-backfill subcollection in Cloud Firestore
+                db.collection(AppConstants.groupsCollection)
+                  .doc(groupId)
+                  .collection(AppConstants.membersCollection)
+                  .doc(uid)
+                  .set(synth.toMap(), SetOptions(merge: true));
+              }
+            }
+          }
+        } catch (_) {}
+
         _memberStore[groupId] = members;
         yield members;
       }

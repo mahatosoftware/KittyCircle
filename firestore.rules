@@ -23,11 +23,13 @@ service cloud.firestore {
     //   - /prizes/{prizeId}
     //   - /contributions/{contributionId}
     //   - /memories/{memoryId}
+    //   - /budgets/{eventId}
     //
     // Collection: /groups/{groupId}
     //   - Fields: ownerId, createdBy, memberIds (list), adminIds (list)
     //   - Subcollections:
     //     - /members/{memberId}
+    //     - /join_requests/{requestId}
     //     - /host_schedules/{scheduleId}
     //     - /events/{eventId}
     //       - /rsvps/{rsvpId}
@@ -41,6 +43,9 @@ service cloud.firestore {
     //     - /expenses/{expenseId}
     //     - /memories/{memoryId}
     //
+    // Top-Level / Collection Group Matching:
+    //   - /{path=**}/invites/{inviteId}
+    //
     // ===============================================================
 
     // Helper functions
@@ -53,22 +58,43 @@ service cloud.firestore {
     }
 
     function isMember(groupId) {
+      let groupPath = /databases/$(database)/documents/groups/$(groupId);
+      let memberPath = /databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid);
       return isSignedIn() && (
+        (exists(groupPath) && (
+          ('ownerId' in get(groupPath).data && get(groupPath).data.ownerId == request.auth.uid) ||
+          ('createdBy' in get(groupPath).data && get(groupPath).data.createdBy == request.auth.uid) ||
+          ('memberIds' in get(groupPath).data && get(groupPath).data.memberIds is list && request.auth.uid in get(groupPath).data.memberIds)
+        )) ||
+        exists(memberPath) ||
         (resource != null && 'ownerId' in resource.data && resource.data.ownerId == request.auth.uid) ||
         (resource != null && 'createdBy' in resource.data && resource.data.createdBy == request.auth.uid) ||
-        (resource != null && 'memberIds' in resource.data && resource.data.memberIds is list && request.auth.uid in resource.data.memberIds) ||
-        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid))
+        (resource != null && 'memberIds' in resource.data && resource.data.memberIds is list && request.auth.uid in resource.data.memberIds)
       );
     }
 
     function isAdmin(groupId) {
+      let groupPath = /databases/$(database)/documents/groups/$(groupId);
+      let memberPath = /databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid);
       return isSignedIn() && (
+        (exists(groupPath) && (
+          ('ownerId' in get(groupPath).data && get(groupPath).data.ownerId == request.auth.uid) ||
+          ('createdBy' in get(groupPath).data && get(groupPath).data.createdBy == request.auth.uid) ||
+          ('adminIds' in get(groupPath).data && get(groupPath).data.adminIds is list && request.auth.uid in get(groupPath).data.adminIds)
+        )) ||
+        (exists(memberPath) && 'role' in get(memberPath).data && get(memberPath).data.role in ['admin', 'owner']) ||
         (resource != null && 'ownerId' in resource.data && resource.data.ownerId == request.auth.uid) ||
         (resource != null && 'createdBy' in resource.data && resource.data.createdBy == request.auth.uid) ||
-        (resource != null && 'adminIds' in resource.data && resource.data.adminIds is list && request.auth.uid in resource.data.adminIds) ||
-        (exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role in ['admin', 'owner'])
+        (resource != null && 'adminIds' in resource.data && resource.data.adminIds is list && request.auth.uid in resource.data.adminIds)
       );
+    }
+
+    // Top-Level / Collection Group rules for Invites
+    match /{path=**}/invites/{inviteId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     // Users Collection
@@ -110,6 +136,10 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
+    match /budgets/{budgetId} {
+      allow read, write: if isSignedIn();
+    }
+
     match /winners/{winnerId} {
       allow read, write: if isSignedIn();
     }
@@ -119,7 +149,7 @@ service cloud.firestore {
     }
 
     match /contributions/{contributionId} {
-      allow read, write: if isSignedIn();
+      allow read, create, update, delete: if isSignedIn();
     }
 
     match /memories/{memoryId} {
@@ -128,24 +158,22 @@ service cloud.firestore {
 
     // Groups & Subcollections
     match /groups/{groupId} {
-      allow read: if isSignedIn() && (
-        isMember(groupId) ||
-        ('ownerId' in resource.data && resource.data.ownerId == request.auth.uid) ||
-        ('createdBy' in resource.data && resource.data.createdBy == request.auth.uid) ||
-        ('memberIds' in resource.data && resource.data.memberIds != null && request.auth.uid in resource.data.memberIds)
-      );
-      allow create: if isSignedIn() && (
-        ('ownerId' in request.resource.data && request.resource.data.ownerId == request.auth.uid) ||
-        ('createdBy' in request.resource.data && request.resource.data.createdBy == request.auth.uid)
-      );
-      allow update: if isSignedIn() && isMember(groupId);
-      allow delete: if isSignedIn() && isAdmin(groupId);
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && isMember(groupId);
 
       // Members
       match /members/{memberId} {
-        allow read: if isSignedIn() && isMember(groupId);
+        allow read: if isSignedIn() && (isMember(groupId) || request.auth.uid == memberId);
         allow create, update: if isSignedIn() && (isMember(groupId) || request.auth.uid == memberId);
         allow delete: if isSignedIn() && (isAdmin(groupId) || request.auth.uid == memberId);
+      }
+
+      // Join Requests
+      match /join_requests/{requestId} {
+        allow read: if isSignedIn() && (isMember(groupId) || request.auth.uid == requestId);
+        allow create: if isSignedIn() && request.auth.uid == requestId;
+        allow update, delete: if isSignedIn() && (isAdmin(groupId) || request.auth.uid == requestId);
       }
 
       // Host Schedules
@@ -189,7 +217,7 @@ service cloud.firestore {
 
       // Contributions
       match /contributions/{contributionId} {
-        allow read, write: if isSignedIn() && isMember(groupId);
+        allow read, create, update, delete: if isSignedIn() && isMember(groupId);
       }
 
       // Expenses & Budgets

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GroupModel {
@@ -12,6 +13,14 @@ class GroupModel {
   final String ownerId;
   final List<String> memberIds;
   final List<String> adminIds;
+  final String inviteCode; // 6-character unique code e.g. KTY7P2
+  final bool inviteEnabled;
+  final bool approvalRequired; // Host approval required
+  final String joiningPolicy; // 'anyone', 'approval', 'invite_only'
+  final String? hostSelectionMode; // 'random', 'volunteer', 'rotation'
+  final String? currentHostId;
+  final String? currentHostName;
+  final List<String> volunteers;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -27,10 +36,26 @@ class GroupModel {
     required this.ownerId,
     required this.memberIds,
     required this.adminIds,
+    String? inviteCode,
+    this.inviteEnabled = true,
+    this.approvalRequired = true,
+    this.joiningPolicy = 'approval',
+    this.hostSelectionMode,
+    this.currentHostId,
+    this.currentHostName,
+    List<String>? volunteers,
     DateTime? createdAt,
     DateTime? updatedAt,
-  })  : createdAt = createdAt ?? DateTime.now(),
+  })  : volunteers = volunteers ?? [],
+        inviteCode = inviteCode ?? _generateInviteCode(),
+        createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
+
+  static String _generateInviteCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final rnd = Random();
+    return List.generate(6, (_) => chars[rnd.nextInt(chars.length)]).join();
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -46,6 +71,14 @@ class GroupModel {
       'createdBy': ownerId,
       'memberIds': memberIds,
       'adminIds': adminIds,
+      'inviteCode': inviteCode,
+      'inviteEnabled': inviteEnabled,
+      'approvalRequired': approvalRequired,
+      'joiningPolicy': joiningPolicy,
+      'hostSelectionMode': hostSelectionMode,
+      'currentHostId': currentHostId,
+      'currentHostName': currentHostName,
+      'volunteers': volunteers,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -79,6 +112,14 @@ class GroupModel {
       ownerId: resolvedOwner,
       memberIds: (map['memberIds'] as List?)?.map((e) => e.toString()).toList() ?? (resolvedOwner.isNotEmpty ? [resolvedOwner] : []),
       adminIds: (map['adminIds'] as List?)?.map((e) => e.toString()).toList() ?? (resolvedOwner.isNotEmpty ? [resolvedOwner] : []),
+      inviteCode: map['inviteCode']?.toString() ?? map['invite_code']?.toString() ?? map['code']?.toString() ?? _generateInviteCode(),
+      inviteEnabled: map['inviteEnabled'] as bool? ?? true,
+      approvalRequired: map['approvalRequired'] as bool? ?? true,
+      joiningPolicy: map['joiningPolicy']?.toString() ?? 'approval',
+      hostSelectionMode: map['hostSelectionMode']?.toString(),
+      currentHostId: map['currentHostId']?.toString(),
+      currentHostName: map['currentHostName']?.toString(),
+      volunteers: (map['volunteers'] as List?)?.map((e) => e.toString()).toList() ?? [],
       createdAt: _parseDate(map['createdAt']),
       updatedAt: _parseDate(map['updatedAt']),
     );
@@ -95,6 +136,14 @@ class GroupModel {
     String? ownerId,
     List<String>? memberIds,
     List<String>? adminIds,
+    String? inviteCode,
+    bool? inviteEnabled,
+    bool? approvalRequired,
+    String? joiningPolicy,
+    String? hostSelectionMode,
+    String? currentHostId,
+    String? currentHostName,
+    List<String>? volunteers,
   }) {
     return GroupModel(
       groupId: groupId,
@@ -108,6 +157,14 @@ class GroupModel {
       ownerId: ownerId ?? this.ownerId,
       memberIds: memberIds ?? this.memberIds,
       adminIds: adminIds ?? this.adminIds,
+      inviteCode: inviteCode ?? this.inviteCode,
+      inviteEnabled: inviteEnabled ?? this.inviteEnabled,
+      approvalRequired: approvalRequired ?? this.approvalRequired,
+      joiningPolicy: joiningPolicy ?? this.joiningPolicy,
+      hostSelectionMode: hostSelectionMode ?? this.hostSelectionMode,
+      currentHostId: currentHostId ?? this.currentHostId,
+      currentHostName: currentHostName ?? this.currentHostName,
+      volunteers: volunteers ?? this.volunteers,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );

@@ -39,36 +39,52 @@ class ContributionRepository {
     required String contributionId,
     required ContributionStatus status,
     required double amountPaid,
+    String? userId,
+    String? userName,
+    String? monthYear,
+    double? amountExpected,
   }) async {
-    final list = _contributionStore[groupId];
-    if (list != null) {
-      final idx = list.indexWhere((c) => c.contributionId == contributionId);
-      if (idx != -1) {
-        final item = list[idx];
-        final updated = ContributionModel(
-          contributionId: item.contributionId,
-          groupId: groupId,
-          userId: item.userId,
-          userName: item.userName,
-          monthYear: item.monthYear,
-          amountExpected: item.amountExpected,
-          amountPaid: amountPaid,
-          status: status,
-        );
-        list[idx] = updated;
+    final list = _contributionStore.putIfAbsent(groupId, () => []);
+    final idx = list.indexWhere((c) => c.contributionId == contributionId || (userId != null && userId.isNotEmpty && c.userId == userId));
 
-        if (Firebase.apps.isNotEmpty || _firestore != null) {
-          try {
-            final db = _firestore ?? FirebaseFirestore.instance;
-            await db
-                .collection(AppConstants.groupsCollection)
-                .doc(groupId)
-                .collection(AppConstants.contributionsCollection)
-                .doc(contributionId)
-                .set(updated.toMap(), SetOptions(merge: true));
-          } catch (_) {}
-        }
-      }
+    ContributionModel updated;
+    if (idx != -1) {
+      final item = list[idx];
+      updated = ContributionModel(
+        contributionId: item.contributionId,
+        groupId: groupId,
+        userId: item.userId,
+        userName: item.userName,
+        monthYear: item.monthYear,
+        amountExpected: item.amountExpected,
+        amountPaid: amountPaid,
+        status: status,
+      );
+      list[idx] = updated;
+    } else {
+      updated = ContributionModel(
+        contributionId: contributionId,
+        groupId: groupId,
+        userId: userId ?? '',
+        userName: userName ?? 'Member',
+        monthYear: monthYear ?? 'October 2026',
+        amountExpected: amountExpected ?? 2000.0,
+        amountPaid: amountPaid,
+        status: status,
+      );
+      list.add(updated);
+    }
+
+    if (Firebase.apps.isNotEmpty || _firestore != null) {
+      try {
+        final db = _firestore ?? FirebaseFirestore.instance;
+        await db
+            .collection(AppConstants.groupsCollection)
+            .doc(groupId)
+            .collection(AppConstants.contributionsCollection)
+            .doc(updated.contributionId)
+            .set(updated.toMap(), SetOptions(merge: true));
+      } catch (_) {}
     }
   }
 }

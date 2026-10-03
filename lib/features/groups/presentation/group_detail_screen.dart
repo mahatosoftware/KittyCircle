@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/services/whatsapp_service.dart';
-import '../../../core/services/deep_link_service.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../../core/widgets/app_buttons.dart';
 import '../../../app/providers.dart';
 import '../domain/group_model.dart';
+import 'widgets/group_invite_modal.dart';
 import '../../members/presentation/members_screen.dart';
 import '../../contributions/presentation/contribution_screen.dart';
+import '../../contributions/presentation/widgets/circle_ledger_tab.dart';
 import '../../expenses/presentation/expense_screen.dart';
 
 class GroupDetailScreen extends ConsumerStatefulWidget {
@@ -132,14 +132,23 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> with Sing
             },
           ),
           IconButton(
-            icon: const Icon(Icons.share, color: AppColors.primary),
+            icon: const Icon(Icons.how_to_reg_outlined, color: AppColors.primary),
+            tooltip: 'Host Selection & Rotation',
             onPressed: () {
-              final link = DeepLinkService.createGroupInviteLink(widget.groupId);
-              WhatsAppService.shareKittyInvitation(
-                groupName: groupAsync.value?.name ?? 'Sunshine Ladies',
-                inviteLink: link,
-                contributionAmount: '₹2,000 monthly',
-              );
+              final group = groupAsync.value;
+              if (group != null) {
+                context.push('/host-selection/${group.groupId}');
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.qr_code_2_rounded, color: AppColors.primary),
+            tooltip: 'Invite Members & QR Code',
+            onPressed: () {
+              final group = groupAsync.value;
+              if (group != null) {
+                GroupInviteModal.show(context, group: group);
+              }
             },
           ),
         ],
@@ -191,7 +200,9 @@ class _GroupOverviewTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final membersAsync = ref.watch(groupMembersProvider(group.groupId));
     final eventsAsync = ref.watch(groupEventsProvider(group.groupId));
+    final joinRequestsAsync = ref.watch(groupJoinRequestsProvider(group.groupId));
     final events = eventsAsync.value ?? [];
+    final joinRequests = joinRequestsAsync.value ?? [];
     final nextEvent = events.where((e) => e.statusString == 'UPCOMING').firstOrNull ?? events.firstOrNull;
 
     return Align(
@@ -203,6 +214,181 @@ class _GroupOverviewTab extends ConsumerWidget {
           child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // PENDING JOIN REQUESTS BANNER FOR HOST / ADMIN
+          if (joinRequests.isNotEmpty) ...[
+            AppCard(
+              backgroundColor: Colors.amber.shade50,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.notifications_active_rounded, color: Colors.amber, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${joinRequests.length} JOIN REQUEST${joinRequests.length > 1 ? "S" : ""} PENDING',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber, letterSpacing: 1.1),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...joinRequests.map((req) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: AppColors.primaryLight.withValues(alpha: 0.3),
+                            child: Text(
+                              req.userName.isNotEmpty ? req.userName.substring(0, 1) : '👤',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  req.userName,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                const Text(
+                                  'Requested to join',
+                                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              await ref.read(groupRepositoryProvider).acceptJoinRequest(group.groupId, req.userId, req.userName);
+                              ref.invalidate(groupMembersProvider(group.groupId));
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('${req.userName} added to ${group.name}! 🎉'),
+                                    backgroundColor: Colors.green,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: const Text('Accept', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: () async {
+                              await ref.read(groupRepositoryProvider).rejectJoinRequest(group.groupId, req.userId);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: const Text('Reject', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          // HOST SELECTION BANNER
+          AppCard(
+            backgroundColor: AppColors.gold.withValues(alpha: 0.12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text('🎉', style: TextStyle(fontSize: 20)),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'HOST SELECTION',
+                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.1),
+                    ),
+                    const Spacer(),
+                    if (group.currentHostName != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '👑 Host: ${group.currentHostName}',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  group.hostSelectionMode == 'random'
+                      ? '🎲 Host Picked Randomly'
+                      : group.hostSelectionMode == 'volunteer'
+                          ? '👑 Host Selection: Volunteer Mode'
+                          : group.hostSelectionMode == 'rotation'
+                              ? '🔄 Host Selection: Rotation Schedule'
+                              : '🎉 Who should host the first Kitty?',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  group.currentHostName != null
+                      ? 'First Kitty Host: ${group.currentHostName}'
+                      : 'Organizer options: Pick randomly 🎲, Volunteer 👑, or Rotation 🔄.',
+                  style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/host-selection/${group.groupId}'),
+                      icon: const Text('🎉', style: TextStyle(fontSize: 14)),
+                      label: Text(group.currentHostName == null ? 'Set Up Host Selection' : 'Change Host Selection'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => context.push('/host-schedule/${group.groupId}'),
+                      icon: const Icon(Icons.calendar_month, size: 14),
+                      label: const Text('View Rotation Schedule'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // NEXT KITTY BANNER
           AppCard(
             gradient: AppColors.primaryGradient,
@@ -237,7 +423,7 @@ class _GroupOverviewTab extends ConsumerWidget {
                     }
                   },
                   icon: Icon(nextEvent != null ? Icons.visibility : Icons.add),
-                  label: Text(nextEvent != null ? 'View Event Details' : 'Create Event'),
+                  label: Text(nextEvent != null ? 'View Event Details' : 'Create Events'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: AppColors.primary,
@@ -319,28 +505,22 @@ class _GroupOverviewTab extends ConsumerWidget {
             _ActionTile(
               icon: Icons.person_add_alt,
               label: 'Invite Member',
-              onTap: () {
-                final link = DeepLinkService.createGroupInviteLink(group.groupId);
-                WhatsAppService.shareKittyInvitation(
-                  groupName: group.name,
-                  inviteLink: link,
-                );
-              },
+              onTap: () => GroupInviteModal.show(context, group: group),
+            ),
+            _ActionTile(
+              icon: Icons.confirmation_number_outlined,
+              label: 'Invitations',
+              onTap: () => context.push('/group/${group.groupId}/invitations'),
             ),
             _ActionTile(
               icon: Icons.event,
-              label: 'Create Event',
-              onTap: () => context.push('/create-event'),
+              label: 'Create Events',
+              onTap: () => context.push('/create-event?groupId=${group.groupId}'),
             ),
             _ActionTile(
               icon: Icons.sports_esports,
               label: 'Start Game',
               onTap: () => context.push('/games'),
-            ),
-            _ActionTile(
-              icon: Icons.swap_horiz,
-              label: 'Host Schedule',
-              onTap: () => context.push('/host-schedule/${group.groupId}'),
             ),
           ],
         ),
@@ -352,8 +532,11 @@ class _GroupOverviewTab extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _StatItem(number: '${group.memberIds.length}', label: 'Members'),
-              _StatItem(number: '12', label: 'Events'),
-              _StatItem(number: '68', label: 'Games Played'),
+              _StatItem(number: '${events.length}', label: 'Events'),
+              _StatItem(
+                number: '${events.where((e) => e.statusString == 'COMPLETED').length}',
+                label: 'Games Played',
+              ),
             ],
           ),
         ),
@@ -429,17 +612,43 @@ class _GroupEventsTab extends ConsumerWidget {
         if (events.isEmpty) {
           return EmptyState(
             title: 'No Kitty Events',
-            description: 'Schedule your first event for this group!',
+            description: 'Schedule Kitty events for all your group members!',
             icon: Icons.event_note_outlined,
-            actionText: 'Create Event',
-            onAction: () => context.push('/create-event'),
+            actionText: 'Create Events 🎉',
+            onAction: () => context.push('/create-event?groupId=$groupId'),
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(20),
-          itemCount: events.length,
-          itemBuilder: (context, index) {
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${events.length} Kitty Event${events.length > 1 ? "s" : ""}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => context.push('/create-event?groupId=$groupId'),
+                    icon: const Icon(Icons.auto_awesome, size: 16),
+                    label: const Text('Create Events'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: events.length,
+                itemBuilder: (context, index) {
             final ev = events[index];
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -486,9 +695,12 @@ class _GroupEventsTab extends ConsumerWidget {
               ),
             );
           },
-        );
-      },
-    );
+        ),
+      ),
+    ],
+  );
+},
+);
   }
 }
 
@@ -553,18 +765,24 @@ class _GroupMoneyTab extends ConsumerWidget {
     final activeEventId = eventsAsync.value?.firstOrNull?.eventId ?? ref.watch(selectedEventIdProvider) ?? '';
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           const TabBar(
+            isScrollable: true,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textMuted,
+            indicatorColor: AppColors.primary,
             tabs: [
-              Tab(text: 'Contributions'),
-              Tab(text: 'Expenses & Budget'),
+              Tab(text: 'Circle Ledger 📖'),
+              Tab(text: 'Monthly Contributions 💵'),
+              Tab(text: 'Expenses & Budget 📊'),
             ],
           ),
           Expanded(
             child: TabBarView(
               children: [
+                CircleLedgerTab(groupId: groupId),
                 ContributionScreen(groupId: groupId),
                 ExpenseScreen(eventId: activeEventId),
               ],

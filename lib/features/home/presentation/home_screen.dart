@@ -120,9 +120,12 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     _QuickActionButton(
                       icon: Icons.event_available_outlined,
-                      label: 'Create Event',
+                      label: 'Create Events',
                       color: const Color(0xFFD81B60),
-                      onTap: () => context.push('/create-event'),
+                      onTap: () {
+                        final id = selectedGroupId ?? userGroupsAsync.value?.firstOrNull?.groupId;
+                        context.push(id != null ? '/create-event?groupId=$id' : '/create-event');
+                      },
                     ),
                     _QuickActionButton(
                       icon: Icons.sports_esports_outlined,
@@ -134,7 +137,7 @@ class HomeScreen extends ConsumerWidget {
                       icon: Icons.qr_code_scanner,
                       label: 'Join Kitty',
                       color: const Color(0xFF1E88E5),
-                      onTap: () => _showJoinKittyDialog(context),
+                      onTap: () => context.push('/join-group?scan=true'),
                     ),
                   ],
                 ),
@@ -338,7 +341,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
-                      onPressed: () => context.push('/create-event'),
+                      onPressed: () => context.push('/create-event?groupId=${activeGroup.groupId}'),
                       icon: const Icon(Icons.event),
                       label: const Text('Schedule Event 🎉', style: TextStyle(fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
@@ -476,43 +479,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  void _showJoinKittyDialog(BuildContext context) {
-    final codeCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Join Kitty Group 🎟️'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Enter group invite code or group ID below:'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: codeCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Group Code / ID',
-                hintText: 'e.g. group_123',
-                prefixIcon: Icon(Icons.qr_code),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              final id = codeCtrl.text.trim();
-              Navigator.pop(ctx);
-              if (id.isNotEmpty) {
-                context.push('/join/group/$id');
-              }
-            },
-            child: const Text('Join'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _QuickActionButton extends StatelessWidget {

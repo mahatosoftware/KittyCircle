@@ -12,6 +12,7 @@ import '../domain/rsvp_model.dart';
 import '../domain/attendance_model.dart';
 import '../domain/event_model.dart';
 import '../domain/host_schedule_model.dart';
+import '../../contributions/presentation/widgets/who_paid_whom_widget.dart';
 
 class EventDetailScreen extends ConsumerWidget {
   final String eventId;
@@ -809,6 +810,10 @@ class EventDetailScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 24),
+
+                // WHO PAID WHOM & KITTY LEDGER SUMMARY
+                WhoPaidWhomWidget(groupId: event.groupId, eventId: event.eventId),
                 const SizedBox(height: 24),
 
                 // WINNERS & PRIZES SUMMARY (if available)

@@ -64,9 +64,9 @@ class MemberModel {
     return MemberModel(
       userId: id,
       groupId: map['groupId'] ?? '',
-      displayName: map['displayName'] ?? 'Member',
-      photoUrl: map['photoUrl'],
-      phoneNumber: map['phoneNumber'],
+      displayName: map['displayName'] ?? map['userName'] ?? map['name'] ?? map['user_name'] ?? map['createdByName'] ?? map['usedByName'] ?? 'Kitty Member',
+      photoUrl: map['photoUrl'] ?? map['photo_url'],
+      phoneNumber: map['phoneNumber'] ?? map['phone'] ?? map['phone_number'],
       role: parseRole(map['role']),
       birthday: (map['birthday'] as Timestamp?)?.toDate(),
       anniversary: (map['anniversary'] as Timestamp?)?.toDate(),
